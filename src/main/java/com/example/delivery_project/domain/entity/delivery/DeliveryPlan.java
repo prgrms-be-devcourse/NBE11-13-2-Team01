@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 @Entity
@@ -32,6 +33,7 @@ public class DeliveryPlan {
             orphanRemoval = true
     )
     @OrderColumn(name = "sequence")
+    @Getter(AccessLevel.NONE)
     private List<DeliveryStop> deliveryStops = new ArrayList<>();
 
     @Column(nullable = false)
@@ -52,8 +54,41 @@ public class DeliveryPlan {
 
     @PrePersist
     private void prePersist() {
-        this.createdAt = LocalDateTime.now();
+        if(this.createdAt == null) {
+            this.createdAt = LocalDateTime.now();
+        }
     }
 
+    public List<DeliveryStop> getDeliveryStops() {
+        return Collections.unmodifiableList(this.deliveryStops);
+    }
 
+    static DeliveryPlan of(
+            User driver,
+            String departureLocation,
+            LocalDateTime scheduledDepartureAt
+    ) {
+        DeliveryPlan plan = new DeliveryPlan();
+        plan.driver = driver;
+        plan.departureLocation = departureLocation;
+        plan.scheduledDepartureAt = scheduledDepartureAt;
+        plan.status = DeliveryPlanStatus.READY;
+        return plan;
+    }
+
+    public DeliveryStop addStop(
+            String address,
+            Double latitude,
+            Double longitude
+    ) {
+        DeliveryStop stop = DeliveryStop.of(
+                this,
+                address,
+                latitude,
+                longitude
+        );
+
+        deliveryStops.add(stop);
+        return stop;
+    }
 }
