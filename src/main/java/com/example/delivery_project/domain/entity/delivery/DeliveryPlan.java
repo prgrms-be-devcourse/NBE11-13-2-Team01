@@ -26,7 +26,11 @@ public class DeliveryPlan {
     @JoinColumn(name = "driver_id", nullable = false)
     private User driver;
 
-    @OneToMany(mappedBy = "deliveryPlan")
+    @OneToMany(
+            mappedBy = "deliveryPlan",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
     @OrderColumn(name = "sequence")
     private List<DeliveryStop> deliveryStops = new ArrayList<>();
 
@@ -46,40 +50,10 @@ public class DeliveryPlan {
 
     private LocalDateTime completedAt;
 
-    private DeliveryPlan(
-            User driver,
-            String departureLocation,
-            LocalDateTime scheduledDepartureAt
-    ) {
-        this.driver = driver;
-        this.departureLocation = departureLocation;
-        this.scheduledDepartureAt = scheduledDepartureAt;
-        this.status = DeliveryPlanStatus.READY;
-    }
-
-    public void start() {
-        this.status = DeliveryPlanStatus.DELIVERING;
-        this.actualDepartureAt = LocalDateTime.now();
-        this.deliveryStops.forEach(DeliveryStop::start);
-    }
-
-    public void complete() {
-        boolean allCompleted =
-                !deliveryStops.isEmpty()
-                        && deliveryStops.stream()
-                        .allMatch(DeliveryStop::isCompleted);
-
-        if (!allCompleted) {
-            // TODO 프로젝트 예외로 변경
-            throw new IllegalStateException("완료되지 않은 배송이 존재합니다.");
-        }
-
-        this.status = DeliveryPlanStatus.COMPLETED;
-        this.completedAt = LocalDateTime.now();
-    }
-
     @PrePersist
     private void prePersist() {
         this.createdAt = LocalDateTime.now();
     }
+
+
 }
