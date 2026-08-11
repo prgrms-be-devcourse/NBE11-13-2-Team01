@@ -50,17 +50,22 @@ CREATE TABLE delivery_plan (
 -- delivery_stop
 -- ------------------------------------------------------------
 CREATE TABLE delivery_stop (
-                               id                BIGINT AUTO_INCREMENT PRIMARY KEY,
-                               delivery_plan_id  BIGINT       NOT NULL,
-                               sequence          INT,
-                               status            VARCHAR(30)  NOT NULL,
-                               address           VARCHAR(255) NOT NULL,
-                               latitude          DOUBLE       NOT NULL,
-                               longitude         DOUBLE       NOT NULL,
-                               completed_at      DATETIME(6),
+                               id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                               delivery_plan_id BIGINT NOT NULL,
+
+                               sequence INT NOT NULL,
+                               status VARCHAR(30) NOT NULL,
+
+                               address VARCHAR(255) NOT NULL,
+                               latitude DOUBLE NOT NULL,
+                               longitude DOUBLE NOT NULL,
+
+                               completed_at DATETIME(6),
+
                                CONSTRAINT fk_delivery_stop_plan
-                                   FOREIGN KEY (delivery_plan_id) REFERENCES delivery_plan (id)
-) ENGINE=InnoDB;
+                                   FOREIGN KEY (delivery_plan_id)
+                                       REFERENCES delivery_plan(id)
+);
 
 -- ------------------------------------------------------------
 -- delivery_item

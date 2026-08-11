@@ -2,6 +2,7 @@ package com.example.delivery_project.domain.entity.delivery;
 
 import com.example.delivery_project.domain.entity.delivery.spec.DeliveryItemSpec;
 import com.example.delivery_project.domain.entity.delivery.spec.DeliveryStopSpec;
+import com.example.delivery_project.domain.entity.delivery.spec.Location;
 import com.example.delivery_project.domain.entity.user.User;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -15,7 +16,7 @@ public class DeliveryPlanFactory {
 
     public static DeliveryPlan create(
             User driver,
-            String departureLocation,
+            Location departureLocation,
             LocalDateTime scheduledDepartureAt,
             List<DeliveryStopSpec> stops
     ) {

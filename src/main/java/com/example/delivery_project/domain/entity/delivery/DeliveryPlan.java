@@ -1,5 +1,6 @@
 package com.example.delivery_project.domain.entity.delivery;
 
+import com.example.delivery_project.domain.entity.delivery.spec.Location;
 import com.example.delivery_project.domain.entity.enums.DeliveryPlanStatus;
 import com.example.delivery_project.domain.entity.user.User;
 import jakarta.persistence.*;
@@ -38,6 +39,8 @@ public class DeliveryPlan {
 
     @Column(nullable = false)
     private String departureLocation;
+    private Double departureLatitude;
+    private Double departureLongitude;
 
     private LocalDateTime scheduledDepartureAt;
 
@@ -65,12 +68,14 @@ public class DeliveryPlan {
 
     static DeliveryPlan of(
             User driver,
-            String departureLocation,
+            Location location,
             LocalDateTime scheduledDepartureAt
     ) {
         DeliveryPlan plan = new DeliveryPlan();
         plan.driver = driver;
-        plan.departureLocation = departureLocation;
+        plan.departureLocation = location.address();
+        plan.departureLatitude = location.latitude();
+        plan.departureLongitude = location.longitude();
         plan.scheduledDepartureAt = scheduledDepartureAt;
         plan.status = DeliveryPlanStatus.READY;
         return plan;
