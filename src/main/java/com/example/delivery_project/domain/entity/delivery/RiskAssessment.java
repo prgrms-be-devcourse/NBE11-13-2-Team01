@@ -19,7 +19,7 @@ public class RiskAssessment {
     private Long id;
 
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "delivery_stop_id", nullable = false, unique = true)
+    @JoinColumn(name = "delivery_stop_id", nullable = false)
     private DeliveryStop deliveryStop;
 
     @Column(nullable = false)

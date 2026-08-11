@@ -1,6 +1,6 @@
 package com.example.delivery_project.domain.entity.delivery;
 
-import com.example.delivery_project.domain.entity.enums.DeliveryStatus;
+import com.example.delivery_project.domain.entity.enums.DeliveryPlanStatus;
 import com.example.delivery_project.domain.entity.user.User;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -39,7 +39,7 @@ public class DeliveryPlan {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private DeliveryStatus status;
+    private DeliveryPlanStatus status;
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -54,11 +54,11 @@ public class DeliveryPlan {
         this.driver = driver;
         this.departureLocation = departureLocation;
         this.scheduledDepartureAt = scheduledDepartureAt;
-        this.status = DeliveryStatus.READY;
+        this.status = DeliveryPlanStatus.READY;
     }
 
     public void start() {
-        this.status = DeliveryStatus.DELIVERING;
+        this.status = DeliveryPlanStatus.DELIVERING;
         this.actualDepartureAt = LocalDateTime.now();
         this.deliveryStops.forEach(DeliveryStop::start);
     }
@@ -74,7 +74,7 @@ public class DeliveryPlan {
             throw new IllegalStateException("완료되지 않은 배송이 존재합니다.");
         }
 
-        this.status = DeliveryStatus.COMPLETED;
+        this.status = DeliveryPlanStatus.COMPLETED;
         this.completedAt = LocalDateTime.now();
     }
 
