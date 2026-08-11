@@ -3,12 +3,14 @@ package com.example.delivery_project.domain.entity.user;
 import com.example.delivery_project.domain.entity.enums.Role;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "users")
 @Getter
+@AllArgsConstructor(access = AccessLevel.PROTECTED)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class User {
     @Id
@@ -21,9 +23,37 @@ public class User {
     @Column(nullable = false)
     private String password;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     private String name;
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private Role role;
+
+    public static User of(
+            String loginId,
+            String password,
+            String name,
+            Role role
+    ) {
+        User user = new User();
+        user.loginId = loginId;
+        user.password = password;
+        user.name = name;
+        user.role = role;
+        return user;
+    }
+
+    public static User of(
+            String loginId,
+            String password,
+            String name
+    ) {
+        return User.of(
+                loginId,
+                password,
+                name,
+                Role.DELIVERY_DRIVER
+        );
+    }
 }

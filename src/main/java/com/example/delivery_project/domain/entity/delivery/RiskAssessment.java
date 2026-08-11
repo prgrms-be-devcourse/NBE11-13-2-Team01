@@ -3,6 +3,7 @@ package com.example.delivery_project.domain.entity.delivery;
 import com.example.delivery_project.domain.entity.enums.RiskLevel;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -10,6 +11,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Getter
+@AllArgsConstructor(access = AccessLevel.PROTECTED)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class RiskAssessment {
     @Id
@@ -17,11 +19,11 @@ public class RiskAssessment {
     private Long id;
 
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "route_segment_id", nullable = false)
-    private RouteSegment routeSegment;
+    @JoinColumn(name = "delivery_stop_id", nullable = false, unique = true)
+    private DeliveryStop deliveryStop;
 
     @Column(nullable = false)
-    private Integer score;
+    private Integer riskScore;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -29,4 +31,5 @@ public class RiskAssessment {
 
     @Column(nullable = false)
     private LocalDateTime analyzedAt;
+
 }
