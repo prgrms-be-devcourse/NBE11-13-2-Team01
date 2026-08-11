@@ -1,5 +1,6 @@
 package com.example.delivery_project.domain.entity.delivery;
 
+import com.example.delivery_project.domain.entity.delivery.spec.Location;
 import com.example.delivery_project.domain.entity.enums.DeliveryPlanStatus;
 import com.example.delivery_project.domain.entity.user.User;
 import jakarta.persistence.*;
@@ -10,6 +11,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 @Entity
@@ -32,10 +34,13 @@ public class DeliveryPlan {
             orphanRemoval = true
     )
     @OrderColumn(name = "sequence")
+    @Getter(AccessLevel.NONE)
     private List<DeliveryStop> deliveryStops = new ArrayList<>();
 
     @Column(nullable = false)
     private String departureLocation;
+    private Double departureLatitude;
+    private Double departureLongitude;
 
     private LocalDateTime scheduledDepartureAt;
 
@@ -52,8 +57,82 @@ public class DeliveryPlan {
 
     @PrePersist
     private void prePersist() {
-        this.createdAt = LocalDateTime.now();
+        if(this.createdAt == null) {
+            this.createdAt = LocalDateTime.now();
+        }
     }
 
+    public List<DeliveryStop> getDeliveryStops() {
+        return Collections.unmodifiableList(this.deliveryStops);
+    }
 
+    static DeliveryPlan of(
+            User driver,
+            Location location,
+            LocalDateTime scheduledDepartureAt
+    ) {
+        DeliveryPlan plan = new DeliveryPlan();
+        plan.driver = driver;
+        plan.departureLocation = location.address();
+        plan.departureLatitude = location.latitude();
+        plan.departureLongitude = location.longitude();
+        plan.scheduledDepartureAt = scheduledDepartureAt;
+        plan.status = DeliveryPlanStatus.READY;
+        return plan;
+    }
+
+    public DeliveryStop addStop(
+            String address,
+            Double latitude,
+            Double longitude
+    ) {
+        DeliveryStop stop = DeliveryStop.of(
+                this,
+                address,
+                latitude,
+                longitude
+        );
+
+        deliveryStops.add(stop);
+        return stop;
+    }
+
+    public void completeStop(long stopId) {
+        //TODO 커스텀 예외로 변경
+        DeliveryStop now = deliveryStops.stream()
+                .filter(stop -> stop.getId().equals(stopId))
+                .findFirst()
+                .orElseThrow(IllegalStateException::new);
+        now.complete();
+    }
+
+    public int getTotalStops() {
+        return deliveryStops.size();
+    }
+
+    public long getRemainingStops() {
+        return deliveryStops.stream()
+                .filter(d -> !d.isCompleted())
+                .count();
+    }
+
+    public long getDangerStops() {
+        return deliveryStops.stream()
+                .filter(d -> !d.isCompleted())
+                .filter(DeliveryStop::isDangerStop)
+                .count();
+    }
+
+    public boolean isCompleted() {
+        return deliveryStops.stream()
+                .allMatch(DeliveryStop::isCompleted);
+    }
+
+    public void finish() {
+        if(!isCompleted()) {
+            // TODO 커스텀 예외로 변경
+            throw new IllegalStateException();
+        }
+        this.status = DeliveryPlanStatus.COMPLETED;
+    }
 }

@@ -36,16 +36,11 @@ public class DeliveryItem {
             ProductType productType,
             Integer quantity
     ) {
-        if(quantity == null || quantity <= 0) {
-            // TODO Delivery 커스텀 예외로 교체
-            throw new IllegalArgumentException("quantity must be greater than or equal to 0");
-        }
-        DeliveryItem deliveryItem = new DeliveryItem();
-        deliveryItem.deliveryStop = deliveryStop;
-        deliveryItem.productName = productName;
-        deliveryItem.productType = productType;
-        deliveryItem.quantity = quantity;
-        return deliveryItem;
-
+        DeliveryItem item = new DeliveryItem();
+        item.deliveryStop = deliveryStop;
+        item.productName = productName;
+        item.productType = productType;
+        item.quantity = quantity;
+        return item;
     }
 }
