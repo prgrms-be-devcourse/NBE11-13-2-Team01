@@ -1,6 +1,5 @@
 package com.example.delivery_project.service.component;
 
-import com.example.delivery_project.component.RiskCalculator;
 import com.example.delivery_project.domain.entity.delivery.DeliveryStop;
 import com.example.delivery_project.domain.entity.delivery.RiskAssessment;
 import org.springframework.stereotype.Component;

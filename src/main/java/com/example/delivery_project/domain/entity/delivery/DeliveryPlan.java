@@ -134,5 +134,6 @@ public class DeliveryPlan {
             throw new IllegalStateException();
         }
         this.status = DeliveryPlanStatus.COMPLETED;
+        this.completedAt = LocalDateTime.now();
     }
 }
