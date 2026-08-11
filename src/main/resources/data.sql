@@ -31,23 +31,28 @@ CREATE TABLE users (
 ) ENGINE=InnoDB;
 
 -- ------------------------------------------------------------
--- delivery_plan
+-- delivery_stop
 -- ------------------------------------------------------------
-CREATE TABLE delivery_plan (
-                               id                      BIGINT AUTO_INCREMENT PRIMARY KEY,
-                               driver_id               BIGINT       NOT NULL,
-                               departure_location      VARCHAR(255) NOT NULL,
-                               scheduled_departure_at  DATETIME(6),
-                               actual_departure_at     DATETIME(6),
-                               status                  VARCHAR(30)  NOT NULL,
-                               created_at              DATETIME(6)  NOT NULL,
-                               completed_at            DATETIME(6),
-                               CONSTRAINT fk_delivery_plan_driver
-                                   FOREIGN KEY (driver_id) REFERENCES users (id)
+CREATE TABLE delivery_stop (
+                               id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                               delivery_plan_id BIGINT NOT NULL,
+
+                               sequence INT NOT NULL,
+                               status VARCHAR(30) NOT NULL,
+
+                               address VARCHAR(255) NOT NULL,
+                               latitude DOUBLE NOT NULL,
+                               longitude DOUBLE NOT NULL,
+
+                               completed_at DATETIME(6),
+
+                               CONSTRAINT fk_delivery_stop_plan
+                                   FOREIGN KEY (delivery_plan_id)
+                                       REFERENCES delivery_plan(id)
 ) ENGINE=InnoDB;
 
 -- ------------------------------------------------------------
--- delivery_stop
+-- delivery_plan
 -- ------------------------------------------------------------
 CREATE TABLE delivery_plan (
                                id                      BIGINT AUTO_INCREMENT PRIMARY KEY,
