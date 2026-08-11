@@ -1,7 +1,11 @@
 package com.example.delivery_project.domain.entity.enums;
 
 public enum DeliveryStopStatus {
-    WAITING,
-    ARRIVED,
-    COMPLETED
+    READY,
+    DELIVERING,
+    COMPLETED;
+
+    public boolean isDelivering() {
+        return this.equals(DELIVERING);
+    }
 }

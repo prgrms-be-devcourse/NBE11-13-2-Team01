@@ -1,19 +1,23 @@
 package com.example.delivery_project.domain.entity.delivery;
 
-import com.example.delivery_project.domain.entity.enums.DeliveryStatus;
+import com.example.delivery_project.domain.entity.enums.DeliveryPlanStatus;
 import com.example.delivery_project.domain.entity.user.User;
-import com.example.delivery_project.domain.entity.vehicle.Vehicle;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Getter
+@AllArgsConstructor(access = AccessLevel.PROTECTED)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class DeliveryPlan {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -22,9 +26,13 @@ public class DeliveryPlan {
     @JoinColumn(name = "driver_id", nullable = false)
     private User driver;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "vehicle_id", nullable = false)
-    private Vehicle vehicle;
+    @OneToMany(
+            mappedBy = "deliveryPlan",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    @OrderColumn(name = "sequence")
+    private List<DeliveryStop> deliveryStops = new ArrayList<>();
 
     @Column(nullable = false)
     private String departureLocation;
@@ -35,11 +43,17 @@ public class DeliveryPlan {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private DeliveryStatus status;
-
-    private Integer overallRiskScore;
+    private DeliveryPlanStatus status;
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    private LocalDateTime completedAt;
+
+    @PrePersist
+    private void prePersist() {
+        this.createdAt = LocalDateTime.now();
+    }
+
 
 }
