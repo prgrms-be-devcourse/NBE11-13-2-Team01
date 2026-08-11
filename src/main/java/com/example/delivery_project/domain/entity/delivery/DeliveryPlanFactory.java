@@ -1,18 +1,21 @@
 package com.example.delivery_project.domain.entity.delivery;
 
+import com.example.delivery_project.component.RiskCalculator;
 import com.example.delivery_project.domain.entity.delivery.spec.DeliveryItemSpec;
 import com.example.delivery_project.domain.entity.delivery.spec.DeliveryStopSpec;
 import com.example.delivery_project.domain.entity.user.User;
-import lombok.AccessLevel;
-import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
+@Component
+@RequiredArgsConstructor
 public class DeliveryPlanFactory {
 
+    private final RiskCalculator riskCalculator;
     public DeliveryPlan create(
             User driver,
             String departureLocation,
@@ -37,6 +40,11 @@ public class DeliveryPlanFactory {
                         itemSpec.quantity()
                 );
             }
+            RiskAssessment assessment = riskCalculator.calculate(
+                    stop,
+                    scheduledDepartureAt
+            );
+            stop.attachRiskAssessment(assessment);
         }
         return plan;
     }

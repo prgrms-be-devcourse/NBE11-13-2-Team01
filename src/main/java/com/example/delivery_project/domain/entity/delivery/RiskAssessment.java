@@ -32,4 +32,8 @@ public class RiskAssessment {
     @Column(nullable = false)
     private LocalDateTime analyzedAt;
 
+    boolean isDanger() {
+        return level == RiskLevel.DANGER;
+    }
+
 }

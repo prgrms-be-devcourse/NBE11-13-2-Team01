@@ -89,4 +89,26 @@ public class DeliveryStop {
         deliveryItems.add(item);
         return item;
     }
+
+    public void attachRiskAssessment(
+            RiskAssessment riskAssessment
+    ) {
+        this.riskAssessment = riskAssessment;
+    }
+
+    void complete() {
+       if(!status.isDelivering()) {
+           //TODO 커스텀 예외로 변경
+           throw new IllegalStateException("배송중이 아니라면 완료할 수 없습니다.");
+       }
+       this.status = DeliveryStopStatus.COMPLETED;
+    }
+
+    boolean isCompleted() {
+        return status.isCompleted();
+    }
+
+    boolean isDangerStop() {
+        return riskAssessment.isDanger();
+    }
 }

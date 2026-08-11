@@ -91,4 +91,43 @@ public class DeliveryPlan {
         deliveryStops.add(stop);
         return stop;
     }
+
+    public void completeStop(long stopId) {
+        //TODO 커스텀 예외로 변경
+        DeliveryStop now = deliveryStops.stream()
+                .filter(stop -> stop.getId().equals(stopId))
+                .findFirst()
+                .orElseThrow(IllegalStateException::new);
+        now.complete();
+    }
+
+    public int getTotalStops() {
+        return deliveryStops.size();
+    }
+
+    public long getRemainingStops() {
+        return deliveryStops.stream()
+                .filter(d -> !d.isCompleted())
+                .count();
+    }
+
+    public long getDangerStops() {
+        return deliveryStops.stream()
+                .filter(d -> !d.isCompleted())
+                .filter(DeliveryStop::isDangerStop)
+                .count();
+    }
+
+    public boolean isCompleted() {
+        return deliveryStops.stream()
+                .allMatch(DeliveryStop::isCompleted);
+    }
+
+    public void finish() {
+        if(!isCompleted()) {
+            // TODO 커스텀 예외로 변경
+            throw new IllegalStateException();
+        }
+        this.status = DeliveryPlanStatus.COMPLETED;
+    }
 }
