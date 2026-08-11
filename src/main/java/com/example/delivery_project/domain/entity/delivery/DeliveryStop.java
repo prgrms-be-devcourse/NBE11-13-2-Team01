@@ -4,6 +4,7 @@ import com.example.delivery_project.domain.entity.enums.DeliveryStopStatus;
 import com.example.delivery_project.domain.entity.enums.ProductType;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -14,6 +15,7 @@ import java.util.List;
 
 @Entity
 @Getter
+@AllArgsConstructor(access = AccessLevel.PROTECTED)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class DeliveryStop {
 
