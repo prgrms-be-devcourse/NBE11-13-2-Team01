@@ -3,6 +3,8 @@ package com.example.delivery_project.domain.entity.delivery;
 import com.example.delivery_project.domain.entity.delivery.spec.Location;
 import com.example.delivery_project.domain.entity.enums.DeliveryPlanStatus;
 import com.example.delivery_project.domain.entity.user.User;
+import com.example.delivery_project.exception.DeliveryException;
+import com.example.delivery_project.exception.global.BusinessException;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -121,8 +123,7 @@ public class DeliveryPlan {
 
     public void start() {
         if(!status.isReady()) {
-            // TODO 커스텀 예외로 변경
-            throw new IllegalStateException("Status is not ready");
+            throw new BusinessException(DeliveryException.DELIVERY_PLAN_NOT_READY_TO_START);
         }
         this.status = DeliveryPlanStatus.DELIVERING;
         this.actualDepartureAt = LocalDateTime.now();
@@ -130,34 +131,30 @@ public class DeliveryPlan {
     }
 
     public void completeStop(long stopId) {
-        // TODO 커스텀 예외로 변경
         DeliveryStop now = deliveryStops.stream()
                 .filter(stop -> stop.getId().equals(stopId))
                 .findFirst()
-                .orElseThrow(IllegalStateException::new);
+                .orElseThrow(() -> new BusinessException(DeliveryException.DELIVERY_STOP_NOT_FOUND));
         now.complete();
     }
 
     public void updateScheduledDepartureAt(LocalDateTime departureAt) {
         if(!status.isReady()) {
-            //TODO 커스텀 예외로 변경
-            throw new IllegalStateException();
+            throw new BusinessException(DeliveryException.DELIVERY_INVALID_PLAN_STATUS_CHANGE);
         }
         this.scheduledDepartureAt = departureAt;
     }
 
     public void reorderStops(List<Long> stopIds) {
         if(!status.isReady()) {
-            //TODO 커스텀 예외로 변경
-            throw new IllegalStateException();
+            throw new BusinessException(DeliveryException.DELIVERY_INVALID_PLAN_STATUS_CHANGE);
         }
 
     }
 
     public void finish() {
         if(!areAllStopsCompleted()) {
-            // TODO 커스텀 예외로 변경
-            throw new IllegalStateException();
+            throw new BusinessException(DeliveryException.DELIVERY_INCOMPLETE_STOP);
         }
         this.status = DeliveryPlanStatus.COMPLETED;
         this.completedAt = LocalDateTime.now();
