@@ -33,35 +33,3 @@ public class WeatherProvider {
                 .body(String.class);
     }
 }
-
-/*
-@Component
-@RequiredArgsConstructor
-public class WeatherProvider {
-
-    private final RestClient restClient;
-
-    @Value("${weather.api.key}")
-    private String apiKey;
-
-    public String getWeather() {
-
-        return restClient.get()
-                .uri(uriBuilder -> uriBuilder
-                        .scheme("https")
-                        .host("apis.data.go.kr")
-                        .path("/1360000/VilageFcstInfoService_2.0/getVilageFcst")
-                        .queryParam("serviceKey", apiKey.trim())
-                        .queryParam("pageNo", 1)
-                        .queryParam("numOfRows", 10)
-                        .queryParam("dataType", "JSON")
-                        .queryParam("base_date", "20260811")
-                        .queryParam("base_time", "1400")
-                        .queryParam("nx", 60)
-                        .queryParam("ny", 127)
-                        .build())
-                .retrieve()
-                .body(String.class);
-    }
-}
- */
