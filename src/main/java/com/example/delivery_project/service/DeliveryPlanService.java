@@ -25,10 +25,13 @@ public class DeliveryPlanService {
     private final DeliveryPlanRepository deliveryPlanRepository;
     private final DeliveryStopRepository deliveryStopRepository;
 
+    private static final String PLAN = "[PLAN]";
+    private static final String STOP = "[STOP]";
+
     public List<DeliveryPlanSummaryResponse> getDeliveryPlans(Long driverId) {
         List<DeliveryPlan> deliveryPlans = deliveryPlanRepository.findAllByDriverId(driverId);
 
-        log.info("plan 목록 조회 완료 driverId: {}, planSize: {} ", driverId, deliveryPlans.size());
+        log.info("{} 목록 조회 완료 driverId: {}, planSize: {} ", PLAN, driverId, deliveryPlans.size());
         return deliveryPlans.stream()
                 .map(DeliveryPlanSummaryResponse::from)
                 .toList();
@@ -36,6 +39,8 @@ public class DeliveryPlanService {
 
     public DeliveryPlanDetailResponse getDeliveryPlan(Long planId) {
         DeliveryPlan plan = getPlanIfExists(planId);
+
+        log.info("{} 조회 완료 planId: {}", PLAN, planId);
         return DeliveryPlanDetailResponse.from(plan);
     }
 
@@ -45,6 +50,7 @@ public class DeliveryPlanService {
     ) {
         DeliveryStop stop = deliveryStopRepository.findDetailByIdAndPlanId(stopId, planId)
                 .orElseThrow(() -> new BusinessException(DeliveryException.DELIVERY_STOP_NOT_FOUND));
+        log.info("{} 조회 완료 planId: {}, stopId: {}", STOP, planId, stopId);
 
         return DeliveryStopResponse.from(stop);
     }
@@ -55,6 +61,7 @@ public class DeliveryPlanService {
             UpdateScheduledDepartureRequest request
     ) {
         DeliveryPlan plan = getPlanIfExists(planId);
+        log.info("{} 예정 시간 변경 요청 planId: {}, 변경 요청 시간: {}", PLAN, planId, request.scheduledDepartureAt());
         plan.updateScheduledDepartureAt(request.scheduledDepartureAt());
     }
 
@@ -64,6 +71,7 @@ public class DeliveryPlanService {
             UpdateDeliveryOrderRequest request
     ) {
         DeliveryPlan plan = getPlanIfExists(planId);
+        log.info("{} 순서 편집 요청 planId: {}", PLAN, planId);
         plan.reorderStops(request.stopIds());
     }
 
@@ -72,6 +80,7 @@ public class DeliveryPlanService {
             Long planId
     ) {
         DeliveryPlan plan = getPlanIfExists(planId);
+        log.info("{} 배송 시작 요청 planId: {}", PLAN, planId);
         plan.start();
     }
 
@@ -81,6 +90,7 @@ public class DeliveryPlanService {
             Long stopId
     ) {
         DeliveryPlan plan = getPlanIfExists(planId);
+        log.info("{} 포인트 배송 완료처리 요청 planId: {}, stopId: {}", PLAN, planId, stopId);
         plan.completeStop(stopId);
     }
 
@@ -89,6 +99,7 @@ public class DeliveryPlanService {
             Long planId
     ) {
         DeliveryPlan plan = getPlanIfExists(planId);
+        log.info("{} 전체 배송 완료 처리 요청 planId: {}", PLAN, planId);
         plan.finish();
     }
 
