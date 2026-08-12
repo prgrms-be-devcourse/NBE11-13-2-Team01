@@ -9,11 +9,15 @@ import com.example.delivery_project.dto.request.UpdateScheduledDepartureRequest;
 import com.example.delivery_project.dto.response.DeliveryPlanDetailResponse;
 import com.example.delivery_project.dto.response.DeliveryPlanSummaryResponse;
 import com.example.delivery_project.dto.response.DeliveryStopResponse;
+import com.example.delivery_project.exception.DeliveryException;
+import com.example.delivery_project.exception.global.BusinessException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
+@Slf4j
 @Service
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
@@ -24,15 +28,14 @@ public class DeliveryPlanService {
     public List<DeliveryPlanSummaryResponse> getDeliveryPlans(Long driverId) {
         List<DeliveryPlan> deliveryPlans = deliveryPlanRepository.findAllByDriverId(driverId);
 
+        log.info("plan 목록 조회 완료 driverId: {}, planSize: {} ", driverId, deliveryPlans.size());
         return deliveryPlans.stream()
                 .map(DeliveryPlanSummaryResponse::from)
                 .toList();
     }
 
     public DeliveryPlanDetailResponse getDeliveryPlan(Long planId) {
-        // TODO 커스텀 예외로 변경
-        DeliveryPlan plan = deliveryPlanRepository.findDetailById(planId)
-                .orElseThrow(IllegalStateException::new);
+        DeliveryPlan plan = getPlanIfExists(planId);
         return DeliveryPlanDetailResponse.from(plan);
     }
 
@@ -40,9 +43,8 @@ public class DeliveryPlanService {
             Long planId,
             Long stopId
     ) {
-        // TODO 커스텀 예외로 변경
         DeliveryStop stop = deliveryStopRepository.findDetailByIdAndPlanId(stopId, planId)
-                .orElseThrow(IllegalStateException::new);
+                .orElseThrow(() -> new BusinessException(DeliveryException.DELIVERY_STOP_NOT_FOUND));
 
         return DeliveryStopResponse.from(stop);
     }
@@ -52,12 +54,8 @@ public class DeliveryPlanService {
             Long planId,
             UpdateScheduledDepartureRequest request
     ) {
-        // TODO 커스텀 예외로 변경
-        DeliveryPlan plan = deliveryPlanRepository.findById(planId)
-                .orElseThrow(IllegalStateException::new);
-        plan.updateScheduledDepartureAt(
-                request.scheduledDepartureAt()
-        );
+        DeliveryPlan plan = getPlanIfExists(planId);
+        plan.updateScheduledDepartureAt(request.scheduledDepartureAt());
     }
 
     @Transactional
@@ -65,9 +63,7 @@ public class DeliveryPlanService {
             Long planId,
             UpdateDeliveryOrderRequest request
     ) {
-        // TODO 커스텀 예외로 변경
-        DeliveryPlan plan = deliveryPlanRepository.findById(planId)
-                .orElseThrow(IllegalStateException::new);
+        DeliveryPlan plan = getPlanIfExists(planId);
         plan.reorderStops(request.stopIds());
     }
 
@@ -75,9 +71,7 @@ public class DeliveryPlanService {
     public void start(
             Long planId
     ) {
-        // TODO 커스텀 예외로 변경
-        DeliveryPlan plan = deliveryPlanRepository.findById(planId)
-                .orElseThrow(IllegalStateException::new);
+        DeliveryPlan plan = getPlanIfExists(planId);
         plan.start();
     }
 
@@ -86,9 +80,7 @@ public class DeliveryPlanService {
             Long planId,
             Long stopId
     ) {
-        // TODO 커스텀 예외로 변경
-        DeliveryPlan plan = deliveryPlanRepository.findById(planId)
-                .orElseThrow(IllegalStateException::new);
+        DeliveryPlan plan = getPlanIfExists(planId);
         plan.completeStop(stopId);
     }
 
@@ -96,9 +88,13 @@ public class DeliveryPlanService {
     public void completePlan(
             Long planId
     ) {
-        // TODO 커스텀 예외로 변경
-        DeliveryPlan plan = deliveryPlanRepository.findById(planId)
-                .orElseThrow(IllegalStateException::new);
+        DeliveryPlan plan = getPlanIfExists(planId);
         plan.finish();
+    }
+
+
+    private DeliveryPlan getPlanIfExists(Long planId) {
+        return deliveryPlanRepository.findById(planId)
+                .orElseThrow(() -> new BusinessException(DeliveryException.DELIVERY_PLAN_NOT_FOUND));
     }
 }
