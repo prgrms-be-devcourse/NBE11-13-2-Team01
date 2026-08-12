@@ -81,31 +81,6 @@ public class DeliveryPlan {
         return plan;
     }
 
-    public DeliveryStop addStop(
-            String address,
-            Double latitude,
-            Double longitude
-    ) {
-        DeliveryStop stop = DeliveryStop.of(
-                this,
-                address,
-                latitude,
-                longitude
-        );
-
-        deliveryStops.add(stop);
-        return stop;
-    }
-
-    public void completeStop(long stopId) {
-        //TODO 커스텀 예외로 변경
-        DeliveryStop now = deliveryStops.stream()
-                .filter(stop -> stop.getId().equals(stopId))
-                .findFirst()
-                .orElseThrow(IllegalStateException::new);
-        now.complete();
-    }
-
     public int getTotalStops() {
         return deliveryStops.size();
     }
@@ -123,17 +98,72 @@ public class DeliveryPlan {
                 .count();
     }
 
-    public boolean isCompleted() {
+    public boolean areAllStopsCompleted() {
         return deliveryStops.stream()
                 .allMatch(DeliveryStop::isCompleted);
     }
 
+    public DeliveryStop addStop(
+            String address,
+            Double latitude,
+            Double longitude
+    ) {
+        DeliveryStop stop = DeliveryStop.of(
+                this,
+                address,
+                latitude,
+                longitude
+        );
+
+        deliveryStops.add(stop);
+        return stop;
+    }
+
+    public void start() {
+        if(!status.isReady()) {
+            // TODO 커스텀 예외로 변경
+            throw new IllegalStateException("Status is not ready");
+        }
+        this.status = DeliveryPlanStatus.DELIVERING;
+        this.actualDepartureAt = LocalDateTime.now();
+        this.deliveryStops.forEach(DeliveryStop::start);
+    }
+
+    public void completeStop(long stopId) {
+        // TODO 커스텀 예외로 변경
+        DeliveryStop now = deliveryStops.stream()
+                .filter(stop -> stop.getId().equals(stopId))
+                .findFirst()
+                .orElseThrow(IllegalStateException::new);
+        now.complete();
+    }
+
+    public void updateScheduledDepartureAt(LocalDateTime departureAt) {
+        if(!status.isReady()) {
+            //TODO 커스텀 예외로 변경
+            throw new IllegalStateException();
+        }
+        this.scheduledDepartureAt = departureAt;
+    }
+
+    public void reorderStops(List<Long> stopIds) {
+        if(!status.isReady()) {
+            //TODO 커스텀 예외로 변경
+            throw new IllegalStateException();
+        }
+
+    }
+
     public void finish() {
-        if(!isCompleted()) {
+        if(!areAllStopsCompleted()) {
             // TODO 커스텀 예외로 변경
             throw new IllegalStateException();
         }
         this.status = DeliveryPlanStatus.COMPLETED;
         this.completedAt = LocalDateTime.now();
+    }
+
+    public boolean isFinished() {
+        return status.isCompleted();
     }
 }
