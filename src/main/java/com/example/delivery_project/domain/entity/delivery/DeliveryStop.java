@@ -2,6 +2,8 @@ package com.example.delivery_project.domain.entity.delivery;
 
 import com.example.delivery_project.domain.entity.enums.DeliveryStopStatus;
 import com.example.delivery_project.domain.entity.enums.ProductType;
+import com.example.delivery_project.exception.DeliveryException;
+import com.example.delivery_project.exception.global.BusinessException;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -107,8 +109,7 @@ public class DeliveryStop {
 
     void complete() {
        if(!status.isDelivering()) {
-           //TODO 커스텀 예외로 변경
-           throw new IllegalStateException("배송중이 아니라면 완료할 수 없습니다.");
+           throw new BusinessException(DeliveryException.DELIVERY_INCOMPLETE_STOP);
        }
        this.status = DeliveryStopStatus.COMPLETED;
        this.completedAt = LocalDateTime.now();
@@ -116,8 +117,7 @@ public class DeliveryStop {
 
     void start() {
         if(!status.isReady()) {
-            //TODO 커스텀 예외로 변경
-            throw new IllegalStateException();
+            throw new BusinessException(DeliveryException.DELIVERY_PLAN_NOT_READY_TO_START);
         }
         this.status = DeliveryStopStatus.DELIVERING;
     }
