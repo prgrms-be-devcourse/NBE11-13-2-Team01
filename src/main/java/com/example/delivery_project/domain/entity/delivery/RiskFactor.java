@@ -25,8 +25,5 @@ public class RiskFactor {
     @Column(nullable = false)
     private RiskFactorType type;
 
-    @Column(nullable = false)
-    private Integer penaltyScore;
-
     private String description;
 }
