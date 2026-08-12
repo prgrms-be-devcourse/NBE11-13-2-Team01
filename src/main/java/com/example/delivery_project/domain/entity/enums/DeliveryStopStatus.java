@@ -12,4 +12,8 @@ public enum DeliveryStopStatus {
     public boolean isCompleted() {
         return this.equals(COMPLETED);
     }
+
+    public boolean isReady() {
+        return this.equals(READY);
+    }
 }
