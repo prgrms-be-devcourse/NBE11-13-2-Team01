@@ -104,6 +104,7 @@ public class DeliveryStop {
            throw new IllegalStateException("배송중이 아니라면 완료할 수 없습니다.");
        }
        this.status = DeliveryStopStatus.COMPLETED;
+       this.completedAt = LocalDateTime.now();
     }
 
     boolean isCompleted() {

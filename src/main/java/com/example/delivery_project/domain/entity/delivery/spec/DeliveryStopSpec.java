@@ -7,4 +7,5 @@ public record DeliveryStopSpec(
         Double latitude,
         Double longitude,
         List<DeliveryItemSpec> items
-) {}
+) {
+}

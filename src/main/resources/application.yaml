@@ -1,3 +1,6 @@
 spring:
   application:
     name: delivery_project
+weather:
+  api:
+    key: ${WEATHER_API_KEY}
