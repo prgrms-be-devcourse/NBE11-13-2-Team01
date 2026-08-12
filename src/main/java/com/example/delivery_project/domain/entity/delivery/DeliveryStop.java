@@ -71,6 +71,13 @@ public class DeliveryStop {
         stop.status = DeliveryStopStatus.READY;
         return stop;
     }
+    boolean isCompleted() {
+        return status.isCompleted();
+    }
+
+    boolean isDangerStop() {
+        return riskAssessment.isDanger();
+    }
 
     public List<DeliveryItem> getDeliveryItems() {
         return Collections.unmodifiableList(this.deliveryItems);
@@ -107,11 +114,12 @@ public class DeliveryStop {
        this.completedAt = LocalDateTime.now();
     }
 
-    boolean isCompleted() {
-        return status.isCompleted();
+    void start() {
+        if(!status.isReady()) {
+            //TODO 커스텀 예외로 변경
+            throw new IllegalStateException();
+        }
+        this.status = DeliveryStopStatus.DELIVERING;
     }
 
-    boolean isDangerStop() {
-        return riskAssessment.isDanger();
-    }
 }
