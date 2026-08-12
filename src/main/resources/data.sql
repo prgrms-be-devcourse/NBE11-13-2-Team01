@@ -103,7 +103,6 @@ CREATE TABLE risk_factor (
                              id                  BIGINT AUTO_INCREMENT PRIMARY KEY,
                              risk_assessment_id  BIGINT       NOT NULL,
                              type                VARCHAR(30)  NOT NULL,
-                             risk_score          INT          NOT NULL,
                              description         VARCHAR(255),
                              CONSTRAINT fk_risk_factor_assessment
                                  FOREIGN KEY (risk_assessment_id) REFERENCES risk_assessment (id)
