@@ -53,7 +53,7 @@ public class User {
                 loginId,
                 password,
                 name,
-                Role.DELIVERY_DRIVER
+                Role.ROLE_DELIVERY_DRIVER
         );
     }
 }
