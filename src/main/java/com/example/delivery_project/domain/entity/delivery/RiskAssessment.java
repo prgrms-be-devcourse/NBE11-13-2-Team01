@@ -63,24 +63,27 @@ public class RiskAssessment {
         return Collections.unmodifiableList(riskFactors);
     }
 
-    public void addFactor(RiskFactor factor) {
+
+    private void addFactor(RiskFactor factor) {
         riskFactors.add(factor);
+        recalculateRiskLevel();
     }
+
     public void addFactor(
             RiskFactorType type,
             String description
     ) {
-        riskFactors.add(RiskFactor.of(
+        this.addFactor(RiskFactor.of(
                 this,
                 type,
                 description
         ));
     }
 
-    private int getRiskScore() {
-        return riskFactors.stream()
+    private void recalculateRiskLevel() {
+        int totalScore = riskFactors.stream()
                 .mapToInt(RiskFactor::getRiskScore)
                 .sum();
+        this.level = RiskLevel.from(totalScore);
     }
-
 }
