@@ -3,7 +3,6 @@
 -- 엔티티 기준: User, DeliveryPlan, DeliveryStop, DeliveryItem,
 --             RiskAssessment, RiskFactor
 -- ============================================================
-
 CREATE DATABASE IF NOT EXISTS delivery_service
     DEFAULT CHARACTER SET utf8mb4
     DEFAULT COLLATE utf8mb4_unicode_ci;
@@ -17,6 +16,7 @@ DROP TABLE IF EXISTS delivery_item;
 DROP TABLE IF EXISTS delivery_stop;
 DROP TABLE IF EXISTS delivery_plan;
 DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS weather;
 
 -- ------------------------------------------------------------
 -- users
@@ -106,4 +106,21 @@ CREATE TABLE risk_factor (
                              description         VARCHAR(255),
                              CONSTRAINT fk_risk_factor_assessment
                                  FOREIGN KEY (risk_assessment_id) REFERENCES risk_assessment (id)
+) ENGINE=InnoDB;
+
+-- ------------------------------------------------------------
+-- weather
+-- ------------------------------------------------------------
+CREATE TABLE weather (
+                         id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+                         nx          INT          NOT NULL,
+                         ny          INT          NOT NULL,
+                         fcst_date   DATE         NOT NULL,
+                         fcst_time   TIME         NOT NULL,
+                         base_date   DATE         NOT NULL,
+                         base_time   TIME         NOT NULL,
+                         category    VARCHAR(10)  NOT NULL,
+                         fcst_value  VARCHAR(50)  NOT NULL,
+                         fetched_at  DATETIME(6)  NOT NULL,
+                         CONSTRAINT uk_weather_slot UNIQUE (nx, ny, fcst_date, fcst_time, category)
 ) ENGINE=InnoDB;
