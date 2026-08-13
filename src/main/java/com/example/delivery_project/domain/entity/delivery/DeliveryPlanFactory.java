@@ -1,48 +1,80 @@
 package com.example.delivery_project.domain.entity.delivery;
 
-import com.example.delivery_project.domain.entity.delivery.spec.DeliveryItemSpec;
-import com.example.delivery_project.domain.entity.delivery.spec.DeliveryStopSpec;
-import com.example.delivery_project.domain.entity.delivery.spec.Location;
 import com.example.delivery_project.domain.entity.user.User;
+import com.example.delivery_project.spec.DeliveryItemSpec;
+import com.example.delivery_project.spec.DeliveryStopSpec;
+import com.example.delivery_project.spec.Location;
+import com.example.delivery_project.spec.RiskFactorSpec;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
-import java.util.Collections;
 import java.util.List;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
-public class DeliveryPlanFactory {
+public final class DeliveryPlanFactory {
 
     public static DeliveryPlan create(
             User driver,
             Location departureLocation,
             LocalDateTime scheduledDepartureAt,
-            List<DeliveryStopSpec> stops
+            List<DeliveryStopSpec> stopSpecs
     ) {
         DeliveryPlan plan = DeliveryPlan.of(
                 driver,
                 departureLocation,
                 scheduledDepartureAt
         );
-        for(DeliveryStopSpec stopSpec : safeList(stops)) {
+        LocalDateTime analyzedAt = LocalDateTime.now();
+
+        for(DeliveryStopSpec stopSpec : stopSpecs){
             DeliveryStop stop = plan.addStop(
-                    stopSpec.address(),
-                    stopSpec.latitude(),
-                    stopSpec.longitude()
+                    stopSpec.location(),
+                    analyzedAt
             );
-            for(DeliveryItemSpec itemSpec : safeList(stopSpec.items())) {
-                stop.addItem(
-                        itemSpec.productName(),
-                        itemSpec.productType(),
-                        itemSpec.quantity()
-                );
-            }
+
+            addItems(stop, stopSpec.items());
+            addRiskFactors(stop, stopSpec.riskFactors());
         }
+
         return plan;
     }
 
-    private static <T> List<T> safeList(List<T> list) {
-        return list == null ? Collections.emptyList() : list;
+    public static DeliveryPlan create(
+            User driver,
+            Location departureLocation,
+            LocalDateTime scheduledDepartureAt
+    ) {
+        return create(
+                driver,
+                departureLocation,
+                scheduledDepartureAt,
+                List.of()
+        );
+    }
+
+    private static void addItems(
+            DeliveryStop stop,
+            List<DeliveryItemSpec> items
+    ) {
+        for(DeliveryItemSpec itemSpec : items){
+            stop.addItem(
+                    itemSpec.productName(),
+                    itemSpec.productType(),
+                    itemSpec.quantity()
+            );
+        }
+    }
+
+    private static void addRiskFactors(
+            DeliveryStop stop,
+            List<RiskFactorSpec> riskFactors
+    ) {
+        for(RiskFactorSpec riskFactorSpec : riskFactors){
+            stop.addRiskFactor(
+                    riskFactorSpec.type(),
+                    riskFactorSpec.description()
+            );
+        }
     }
 }

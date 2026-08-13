@@ -8,12 +8,12 @@ import java.util.Optional;
 
 public interface DeliveryStopRepository extends JpaRepository<DeliveryStop, Long> {
     @Query("""
-    select distinct s
-    from DeliveryStop s
-    join fetch s.deliveryItems
-    where s.id = :stopId
-      and s.deliveryPlan.id = :planId
-""")
+        select distinct s
+        from DeliveryStop s
+        left join fetch s.deliveryItems
+        where s.id = :stopId
+          and s.deliveryPlan.id = :planId
+    """)
     Optional<DeliveryStop> findDetailByIdAndPlanId(
             Long stopId,
             Long planId

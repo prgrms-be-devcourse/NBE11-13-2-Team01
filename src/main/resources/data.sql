@@ -57,13 +57,16 @@ CREATE INDEX idx_delivery_plan_driver_created
 CREATE TABLE delivery_stop (
                                id                BIGINT AUTO_INCREMENT PRIMARY KEY,
                                delivery_plan_id  BIGINT       NOT NULL,
+                               sequence          INT,
                                status            VARCHAR(30)  NOT NULL,
                                address           VARCHAR(255) NOT NULL,
                                latitude          DOUBLE       NOT NULL,
                                longitude         DOUBLE       NOT NULL,
                                completed_at      DATETIME(6),
+
                                CONSTRAINT fk_delivery_stop_plan
-                                   FOREIGN KEY (delivery_plan_id) REFERENCES delivery_plan (id)
+                                   FOREIGN KEY (delivery_plan_id)
+                                       REFERENCES delivery_plan (id)
 ) ENGINE=InnoDB;
 
 CREATE INDEX idx_delivery_stop_plan
@@ -88,7 +91,6 @@ CREATE TABLE delivery_item (
 CREATE TABLE risk_assessment (
                                  id                BIGINT AUTO_INCREMENT PRIMARY KEY,
                                  delivery_stop_id  BIGINT      NOT NULL,
-                                 risk_score        INT         NOT NULL,
                                  level             VARCHAR(30) NOT NULL,
                                  analyzed_at       DATETIME(6) NOT NULL,
                                  CONSTRAINT uk_risk_assessment_stop UNIQUE (delivery_stop_id),
@@ -107,3 +109,9 @@ CREATE TABLE risk_factor (
                              CONSTRAINT fk_risk_factor_assessment
                                  FOREIGN KEY (risk_assessment_id) REFERENCES risk_assessment (id)
 ) ENGINE=InnoDB;
+
+CREATE INDEX idx_delivery_item_stop
+    ON delivery_item (delivery_stop_id);
+
+CREATE INDEX idx_risk_factor_assessment
+    ON risk_factor (risk_assessment_id);

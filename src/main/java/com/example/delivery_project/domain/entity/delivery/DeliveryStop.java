@@ -1,10 +1,12 @@
 package com.example.delivery_project.domain.entity.delivery;
 
-import com.example.delivery_project.domain.entity.enums.DeliveryStopStatus;
-import com.example.delivery_project.domain.entity.enums.ProductType;
+import com.example.delivery_project.enums.DeliveryStopStatus;
+import com.example.delivery_project.enums.ProductType;
+import com.example.delivery_project.enums.RiskFactorType;
+import com.example.delivery_project.exception.DeliveryException;
+import com.example.delivery_project.exception.global.BusinessException;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -15,7 +17,6 @@ import java.util.List;
 
 @Entity
 @Getter
-@AllArgsConstructor(access = AccessLevel.PROTECTED)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class DeliveryStop {
 
@@ -61,7 +62,8 @@ public class DeliveryStop {
             DeliveryPlan deliveryPlan,
             String address,
             Double latitude,
-            Double longitude
+            Double longitude,
+            LocalDateTime analyzedAt
     ) {
         DeliveryStop stop = new DeliveryStop();
         stop.deliveryPlan = deliveryPlan;
@@ -69,8 +71,45 @@ public class DeliveryStop {
         stop.latitude = latitude;
         stop.longitude = longitude;
         stop.status = DeliveryStopStatus.READY;
+
+        stop.riskAssessment = RiskAssessment.of(
+                stop,
+                analyzedAt
+        );
         return stop;
     }
+
+    void addRiskFactor(
+            RiskFactorType type,
+            String description
+    ) {
+        riskAssessment.addFactor(
+                type,
+                description
+        );
+    }
+
+    public DeliveryItem addItem(
+            String productName,
+            ProductType productType,
+            Integer quantity
+    ) {
+        if(!status.isReady()) {
+            throw new BusinessException(
+                    DeliveryException.DELIVERY_INVALID_PLAN_STATUS_CHANGE
+            );
+        }
+        DeliveryItem item = DeliveryItem.of(
+                this,
+                productName,
+                productType,
+                quantity
+        );
+
+        deliveryItems.add(item);
+        return item;
+    }
+
     boolean isCompleted() {
         return status.isCompleted();
     }
@@ -83,32 +122,9 @@ public class DeliveryStop {
         return Collections.unmodifiableList(this.deliveryItems);
     }
 
-    public DeliveryItem addItem(
-            String productName,
-            ProductType productType,
-            Integer quantity
-    ) {
-        DeliveryItem item = DeliveryItem.of(
-                this,
-                productName,
-                productType,
-                quantity
-        );
-
-        deliveryItems.add(item);
-        return item;
-    }
-
-    public void attachRiskAssessment(
-            RiskAssessment riskAssessment
-    ) {
-        this.riskAssessment = riskAssessment;
-    }
-
     void complete() {
        if(!status.isDelivering()) {
-           //TODO 커스텀 예외로 변경
-           throw new IllegalStateException("배송중이 아니라면 완료할 수 없습니다.");
+           throw new BusinessException(DeliveryException.DELIVERY_INCOMPLETE_STOP);
        }
        this.status = DeliveryStopStatus.COMPLETED;
        this.completedAt = LocalDateTime.now();
@@ -116,8 +132,7 @@ public class DeliveryStop {
 
     void start() {
         if(!status.isReady()) {
-            //TODO 커스텀 예외로 변경
-            throw new IllegalStateException();
+            throw new BusinessException(DeliveryException.DELIVERY_PLAN_NOT_READY_TO_START);
         }
         this.status = DeliveryStopStatus.DELIVERING;
     }
