@@ -1,7 +1,7 @@
 package com.example.delivery_project.domain.entity.delivery;
 
-import com.example.delivery_project.domain.entity.delivery.spec.Location;
-import com.example.delivery_project.domain.entity.enums.DeliveryPlanStatus;
+import com.example.delivery_project.spec.Location;
+import com.example.delivery_project.enums.DeliveryPlanStatus;
 import com.example.delivery_project.domain.entity.user.User;
 import com.example.delivery_project.exception.DeliveryException;
 import com.example.delivery_project.exception.ErrorCode;

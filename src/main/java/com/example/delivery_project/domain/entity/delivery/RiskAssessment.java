@@ -1,10 +1,9 @@
 package com.example.delivery_project.domain.entity.delivery;
 
-import com.example.delivery_project.domain.entity.enums.RiskFactorType;
-import com.example.delivery_project.domain.entity.enums.RiskLevel;
+import com.example.delivery_project.enums.RiskFactorType;
+import com.example.delivery_project.enums.RiskLevel;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 

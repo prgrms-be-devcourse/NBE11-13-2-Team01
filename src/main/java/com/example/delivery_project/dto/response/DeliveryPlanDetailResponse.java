@@ -1,7 +1,7 @@
 package com.example.delivery_project.dto.response;
 
 import com.example.delivery_project.domain.entity.delivery.DeliveryPlan;
-import com.example.delivery_project.domain.entity.enums.DeliveryPlanStatus;
+import com.example.delivery_project.enums.DeliveryPlanStatus;
 
 import java.time.LocalDateTime;
 import java.util.List;
