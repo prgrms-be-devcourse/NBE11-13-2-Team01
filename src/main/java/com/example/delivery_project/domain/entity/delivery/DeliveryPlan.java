@@ -43,6 +43,7 @@ public class DeliveryPlan {
     private Double departureLatitude;
     private Double departureLongitude;
 
+    @Column(nullable = false)
     private LocalDateTime scheduledDepartureAt;
 
     private LocalDateTime actualDepartureAt;
@@ -140,7 +141,7 @@ public class DeliveryPlan {
     }
 
     public void start() {
-        if(!status.isReady()) {
+        if(!status.isReady() || deliveryStops.isEmpty()) {
             throwException(DeliveryException.DELIVERY_PLAN_NOT_READY_TO_START);
         }
         this.status = DeliveryPlanStatus.DELIVERING;

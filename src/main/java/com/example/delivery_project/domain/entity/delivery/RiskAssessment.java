@@ -69,7 +69,7 @@ public class RiskAssessment {
         recalculateRiskLevel();
     }
 
-    public void addFactor(
+    void addFactor(
             RiskFactorType type,
             String description
     ) {
