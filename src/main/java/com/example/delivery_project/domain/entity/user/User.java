@@ -3,7 +3,6 @@ package com.example.delivery_project.domain.entity.user;
 import com.example.delivery_project.enums.Role;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
