@@ -2,6 +2,7 @@ package com.example.delivery_project.domain.entity.delivery;
 
 import com.example.delivery_project.domain.entity.enums.DeliveryStopStatus;
 import com.example.delivery_project.domain.entity.enums.ProductType;
+import com.example.delivery_project.domain.entity.enums.RiskFactorType;
 import com.example.delivery_project.exception.DeliveryException;
 import com.example.delivery_project.exception.global.BusinessException;
 import jakarta.persistence.*;
@@ -17,7 +18,6 @@ import java.util.List;
 
 @Entity
 @Getter
-@AllArgsConstructor(access = AccessLevel.PROTECTED)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class DeliveryStop {
 
@@ -63,7 +63,8 @@ public class DeliveryStop {
             DeliveryPlan deliveryPlan,
             String address,
             Double latitude,
-            Double longitude
+            Double longitude,
+            LocalDateTime analyzedAt
     ) {
         DeliveryStop stop = new DeliveryStop();
         stop.deliveryPlan = deliveryPlan;
@@ -71,18 +72,22 @@ public class DeliveryStop {
         stop.latitude = latitude;
         stop.longitude = longitude;
         stop.status = DeliveryStopStatus.READY;
+
+        stop.riskAssessment = RiskAssessment.of(
+                stop,
+                analyzedAt
+        );
         return stop;
     }
-    boolean isCompleted() {
-        return status.isCompleted();
-    }
 
-    boolean isDangerStop() {
-        return riskAssessment.isDanger();
-    }
-
-    public List<DeliveryItem> getDeliveryItems() {
-        return Collections.unmodifiableList(this.deliveryItems);
+    void addRiskFactor(
+            RiskFactorType type,
+            String description
+    ) {
+        riskAssessment.addFactor(
+                type,
+                description
+        );
     }
 
     public DeliveryItem addItem(
@@ -90,6 +95,11 @@ public class DeliveryStop {
             ProductType productType,
             Integer quantity
     ) {
+        if(!status.isReady()) {
+            throw new BusinessException(
+                    DeliveryException.DELIVERY_INVALID_PLAN_STATUS_CHANGE
+            );
+        }
         DeliveryItem item = DeliveryItem.of(
                 this,
                 productName,
@@ -101,10 +111,16 @@ public class DeliveryStop {
         return item;
     }
 
-    public void attachRiskAssessment(
-            RiskAssessment riskAssessment
-    ) {
-        this.riskAssessment = riskAssessment;
+    boolean isCompleted() {
+        return status.isCompleted();
+    }
+
+    boolean isDangerStop() {
+        return riskAssessment.isDanger();
+    }
+
+    public List<DeliveryItem> getDeliveryItems() {
+        return Collections.unmodifiableList(this.deliveryItems);
     }
 
     void complete() {

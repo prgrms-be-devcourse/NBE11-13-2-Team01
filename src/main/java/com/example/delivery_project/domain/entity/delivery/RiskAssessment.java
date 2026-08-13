@@ -1,5 +1,6 @@
 package com.example.delivery_project.domain.entity.delivery;
 
+import com.example.delivery_project.domain.entity.enums.RiskFactorType;
 import com.example.delivery_project.domain.entity.enums.RiskLevel;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -8,10 +9,12 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 @Entity
 @Getter
-@AllArgsConstructor(access = AccessLevel.PROTECTED)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class RiskAssessment {
     @Id
@@ -19,11 +22,20 @@ public class RiskAssessment {
     private Long id;
 
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "delivery_stop_id", nullable = false)
+    @JoinColumn(
+            name = "delivery_stop_id",
+            nullable = false,
+            unique = true
+    )
     private DeliveryStop deliveryStop;
 
-    @Column(nullable = false)
-    private Integer riskScore;
+    @OneToMany(
+            mappedBy = "riskAssessment",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    @Getter(AccessLevel.NONE)
+    private List<RiskFactor> riskFactors = new ArrayList<>();
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -32,8 +44,43 @@ public class RiskAssessment {
     @Column(nullable = false)
     private LocalDateTime analyzedAt;
 
+    static RiskAssessment of(
+            DeliveryStop stop,
+            LocalDateTime analyzedAt
+    ) {
+        RiskAssessment assessment = new RiskAssessment();
+        assessment.deliveryStop = stop;
+        assessment.analyzedAt = analyzedAt;
+        assessment.level = RiskLevel.from(0);
+        return assessment;
+    }
+
     boolean isDanger() {
         return level == RiskLevel.DANGER;
+    }
+
+    public List<RiskFactor> getRiskFactors() {
+        return Collections.unmodifiableList(riskFactors);
+    }
+
+    public void addFactor(RiskFactor factor) {
+        riskFactors.add(factor);
+    }
+    public void addFactor(
+            RiskFactorType type,
+            String description
+    ) {
+        riskFactors.add(RiskFactor.of(
+                this,
+                type,
+                description
+        ));
+    }
+
+    private int getRiskScore() {
+        return riskFactors.stream()
+                .mapToInt(RiskFactor::getRiskScore)
+                .sum();
     }
 
 }

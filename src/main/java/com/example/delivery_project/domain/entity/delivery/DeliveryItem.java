@@ -2,14 +2,14 @@ package com.example.delivery_project.domain.entity.delivery;
 
 import com.example.delivery_project.domain.entity.enums.ProductType;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Positive;
 import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
 @Getter
-@AllArgsConstructor(access = AccessLevel.PROTECTED)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class DeliveryItem {
     @Id
@@ -21,6 +21,7 @@ public class DeliveryItem {
     private DeliveryStop deliveryStop;
 
     @Column(nullable = false)
+    @NotBlank
     private String productName;
 
     @Enumerated(EnumType.STRING)
@@ -28,6 +29,7 @@ public class DeliveryItem {
     private ProductType productType;
 
     @Column(nullable = false)
+    @Positive
     private Integer quantity;
 
     static DeliveryItem of(
@@ -43,5 +45,4 @@ public class DeliveryItem {
         item.quantity = quantity;
         return item;
     }
-
 }
