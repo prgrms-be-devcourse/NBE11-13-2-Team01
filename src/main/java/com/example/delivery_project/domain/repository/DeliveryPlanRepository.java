@@ -11,12 +11,12 @@ import java.util.Optional;
 
 public interface DeliveryPlanRepository extends JpaRepository<DeliveryPlan,Long> {
     @Query("""
-    select distinct p
-    from DeliveryPlan p
-    join fetch p.deliveryStops s
-    join fetch s.deliveryItems
-    where p.id = :id
-""")
+        select distinct p
+        from DeliveryPlan p
+        left join fetch p.deliveryStops s
+        left join fetch s.deliveryItems
+        where p.id = :id
+    """)
     Optional<DeliveryPlan> findDetailById(Long id);
 
     List<DeliveryPlan> findAllByDriverId(Long driverId);
