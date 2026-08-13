@@ -1,14 +1,13 @@
 package com.example.delivery_project.domain.entity.delivery;
 
-import com.example.delivery_project.domain.entity.delivery.spec.Location;
-import com.example.delivery_project.domain.entity.enums.DeliveryPlanStatus;
+import com.example.delivery_project.spec.Location;
+import com.example.delivery_project.enums.DeliveryPlanStatus;
 import com.example.delivery_project.domain.entity.user.User;
 import com.example.delivery_project.exception.DeliveryException;
 import com.example.delivery_project.exception.ErrorCode;
 import com.example.delivery_project.exception.global.BusinessException;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -19,7 +18,6 @@ import java.util.stream.Collectors;
 
 @Entity
 @Getter
-@AllArgsConstructor(access = AccessLevel.PROTECTED)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class DeliveryPlan {
 
@@ -45,6 +43,7 @@ public class DeliveryPlan {
     private Double departureLatitude;
     private Double departureLongitude;
 
+    @Column(nullable = false)
     private LocalDateTime scheduledDepartureAt;
 
     private LocalDateTime actualDepartureAt;
@@ -65,10 +64,6 @@ public class DeliveryPlan {
         }
     }
 
-    public List<DeliveryStop> getDeliveryStops() {
-        return Collections.unmodifiableList(this.deliveryStops);
-    }
-
     static DeliveryPlan of(
             User driver,
             Location location,
@@ -82,6 +77,44 @@ public class DeliveryPlan {
         plan.scheduledDepartureAt = scheduledDepartureAt;
         plan.status = DeliveryPlanStatus.READY;
         return plan;
+    }
+
+    public DeliveryStop addStop(
+            String address,
+            Double latitude,
+            Double longitude,
+            LocalDateTime analyzedAt
+    ) {
+        if(!status.isReady()) {
+            throwException(
+                    DeliveryException.DELIVERY_INVALID_PLAN_STATUS_CHANGE
+            );
+        }
+        DeliveryStop deliveryStop = DeliveryStop.of(
+                this,
+                address,
+                latitude,
+                longitude,
+                analyzedAt
+        );
+        this.deliveryStops.add(deliveryStop);
+        return deliveryStop;
+    }
+
+    public DeliveryStop addStop(
+            Location location,
+            LocalDateTime analyzedAt
+    ) {
+        return this.addStop(
+                location.address(),
+                location.latitude(),
+                location.longitude(),
+                analyzedAt
+        );
+    }
+
+    public List<DeliveryStop> getDeliveryStops() {
+        return Collections.unmodifiableList(this.deliveryStops);
     }
 
     public int getTotalStops() {
@@ -102,28 +135,13 @@ public class DeliveryPlan {
     }
 
     public boolean areAllStopsCompleted() {
-        return deliveryStops.stream()
+        return !deliveryStops.isEmpty()
+                && deliveryStops.stream()
                 .allMatch(DeliveryStop::isCompleted);
     }
 
-    public DeliveryStop addStop(
-            String address,
-            Double latitude,
-            Double longitude
-    ) {
-        DeliveryStop stop = DeliveryStop.of(
-                this,
-                address,
-                latitude,
-                longitude
-        );
-
-        deliveryStops.add(stop);
-        return stop;
-    }
-
     public void start() {
-        if(!status.isReady()) {
+        if(!status.isReady() || deliveryStops.isEmpty()) {
             throwException(DeliveryException.DELIVERY_PLAN_NOT_READY_TO_START);
         }
         this.status = DeliveryPlanStatus.DELIVERING;
@@ -180,6 +198,11 @@ public class DeliveryPlan {
     }
 
     public void finish() {
+        if(!status.isDelivering()) {
+            throwException(
+                    DeliveryException.DELIVERY_INVALID_PLAN_STATUS_CHANGE
+            );
+        }
         if(!areAllStopsCompleted()) {
             throwException(
                     DeliveryException.DELIVERY_INCOMPLETE_STOP

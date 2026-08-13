@@ -1,4 +1,4 @@
-package com.example.delivery_project.domain.entity.enums;
+package com.example.delivery_project.enums;
 
 public enum Role {
     ROLE_DELIVERY_DRIVER,

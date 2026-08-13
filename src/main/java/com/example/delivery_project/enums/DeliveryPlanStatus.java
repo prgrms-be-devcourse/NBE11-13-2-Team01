@@ -1,9 +1,13 @@
-package com.example.delivery_project.domain.entity.enums;
+package com.example.delivery_project.enums;
 
-public enum DeliveryStopStatus {
+public enum DeliveryPlanStatus {
     READY,
     DELIVERING,
     COMPLETED;
+
+    public boolean isReady() {
+        return this.equals(READY);
+    }
 
     public boolean isDelivering() {
         return this.equals(DELIVERING);
@@ -11,9 +15,5 @@ public enum DeliveryStopStatus {
 
     public boolean isCompleted() {
         return this.equals(COMPLETED);
-    }
-
-    public boolean isReady() {
-        return this.equals(READY);
     }
 }
