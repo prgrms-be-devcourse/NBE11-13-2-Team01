@@ -4,8 +4,6 @@ import java.util.List;
 
 public record CreateDeliveryStopRequest(
         String address,
-        Double latitude,
-        Double longitude,
         List<CreateDeliveryItemRequest> items
 ) {
     public CreateDeliveryStopRequest {

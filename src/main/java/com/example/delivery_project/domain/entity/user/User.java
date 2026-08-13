@@ -10,7 +10,6 @@ import lombok.NoArgsConstructor;
 @Entity
 @Table(name = "users")
 @Getter
-@AllArgsConstructor(access = AccessLevel.PROTECTED)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class User {
     @Id
@@ -31,13 +30,15 @@ public class User {
     private Role role;
 
     public static User of(
-            String loginId,
+            Long id,
+            String userId,
             String password,
             String name,
             Role role
     ) {
-        User user = new User();
-        user.loginId = loginId;
+        User user =  new User();
+        user.id = id;
+        user.loginId = userId;
         user.password = password;
         user.name = name;
         user.role = role;
@@ -47,9 +48,26 @@ public class User {
     public static User of(
             String loginId,
             String password,
+            String name,
+            Role role
+    ) {
+
+        return User.of(
+                null,
+                loginId,
+                password,
+                name,
+                role
+        );
+    }
+
+    public static User of(
+            String loginId,
+            String password,
             String name
     ) {
         return User.of(
+                null,
                 loginId,
                 password,
                 name,

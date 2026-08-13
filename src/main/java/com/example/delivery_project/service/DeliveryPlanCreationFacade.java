@@ -11,10 +11,9 @@ import com.example.delivery_project.dto.request.CreateDeliveryStopRequest;
 import com.example.delivery_project.dto.response.WeatherRiskResponse;
 import com.example.delivery_project.exception.ExceptionCode;
 import com.example.delivery_project.exception.global.BusinessException;
-import com.example.delivery_project.spec.DeliveryItemSpec;
-import com.example.delivery_project.spec.DeliveryStopSpec;
-import com.example.delivery_project.spec.Location;
-import com.example.delivery_project.spec.RiskFactorSpec;
+import com.example.delivery_project.service.component.GeocodingClient;
+import com.example.delivery_project.service.component.LocationMapper;
+import com.example.delivery_project.spec.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -30,6 +29,8 @@ public class DeliveryPlanCreationFacade {
 
     private final UserRepository userRepository;
     private final DeliveryPlanRepository deliveryPlanRepository;
+    private final GeocodingClient geocodingClient;
+    private final LocationMapper locationMapper;
 
     public Long create(
             Long driverId,
@@ -37,6 +38,9 @@ public class DeliveryPlanCreationFacade {
             WeatherRiskResponse weatherRisk
     ) {
         User driver = getDriver(driverId);
+
+        Location departureLocation =
+                resolveLocation(request.departureAddress());
 
         List<RiskFactorSpec> riskFactorSpecs =
                 toRiskFactorSpecs(weatherRisk);
@@ -53,7 +57,7 @@ public class DeliveryPlanCreationFacade {
 
         DeliveryPlan plan = DeliveryPlanFactory.create(
                 driver,
-                request.toDepartureLocation(),
+                departureLocation,
                 request.scheduledDepartureAt(),
                 stopSpecs
         );
@@ -74,22 +78,26 @@ public class DeliveryPlanCreationFacade {
             CreateDeliveryStopRequest request,
             List<RiskFactorSpec> riskFactorSpecs
     ) {
+        Location location =
+                resolveLocation(request.address());
+
         List<DeliveryItemSpec> itemSpecs =
                 request.items().stream()
                         .map(this::toItemSpec)
                         .toList();
-
-        Location location = new Location(
-                request.address(),
-                request.latitude(),
-                request.longitude()
-        );
 
         return new DeliveryStopSpec(
                 location,
                 itemSpecs,
                 riskFactorSpecs
         );
+    }
+
+    private Location resolveLocation(String address) {
+        GeocodedLocation result =
+                geocodingClient.geocode(address);
+
+        return locationMapper.toLocation(result);
     }
 
     private DeliveryItemSpec toItemSpec(
