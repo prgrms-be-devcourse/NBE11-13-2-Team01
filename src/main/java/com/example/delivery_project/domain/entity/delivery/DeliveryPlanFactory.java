@@ -29,7 +29,7 @@ public final class DeliveryPlanFactory {
 
         for(DeliveryStopSpec stopSpec : stopSpecs){
             DeliveryStop stop = plan.addStop(
-                    departureLocation,
+                    stopSpec.location(),
                     analyzedAt
             );
 
@@ -76,9 +76,5 @@ public final class DeliveryPlanFactory {
                     riskFactorSpec.description()
             );
         }
-    }
-
-    private static <T> List<T> safeList(List<T> values) {
-        return values == null ? List.of() : values;
     }
 }
