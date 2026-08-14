@@ -1,7 +1,8 @@
 package com.example.delivery_project.security.jwt;
 
+import com.example.delivery_project.domain.entity.user.User;
+import com.example.delivery_project.enums.Role;
 import com.example.delivery_project.security.auth.CustomUserDetails;
-import com.example.delivery_project.security.auth.CustomUserDetailsService;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
@@ -21,8 +22,11 @@ import java.util.Date;
 @RequiredArgsConstructor
 public class TokenProvider {
 
+    private static final String CLAIM_ID = "id";
+    private static final String CLAIM_NAME = "name";
+    private static final String CLAIM_ROLE = "role";
+
     private final JwtProperties jwtProperties;
-    private final CustomUserDetailsService customUserDetailsService;
 
     private SecretKey secretKey;
     private JwtParser jwtParser;
@@ -37,34 +41,26 @@ public class TokenProvider {
     }
 
     // JWT 문자열 생성
-    public String generateToken(String loginId, Duration validity) {
+    public String generateToken(User user, Duration validity) {
 
         Date now = new Date();
         Date expiredAt = new Date(now.getTime() + validity.toMillis());
 
-        // token에 넣을 정보 : iss, sub, iat, exp (role, name, id 제외)
-        // User의 정보는 loginId(sub)만 넣는다. -> 인자에 User 객체 통으로 넣지 않아도 됨
+        // token에 넣을 정보 : iss, sub, iat, exp, role, name, id
         return Jwts.builder()
                 .header().type("JWT").and()
                 .issuer(jwtProperties.getIssuer())
-                .subject(loginId)
                 .issuedAt(now)
                 .expiration(expiredAt)
+                .subject(user.getLoginId())
+                .claim(CLAIM_ID, user.getId())
+                .claim(CLAIM_NAME, user.getName())
+                .claim(CLAIM_ROLE, user.getRole().name())
                 .signWith(secretKey, Jwts.SIG.HS512)
                 .compact();
     }
 
-    // access token 생성
-    public String generateAccessToken(String loginId) {
-        return generateToken(loginId, jwtProperties.getAccessTokenValidity());
-    }
-
-    // refresh token 생성
-    public String generateRefreshToken(String loginId) {
-        return generateToken(loginId, jwtProperties.getRefreshTokenValidity());
-    }
-
-    // 토큰 검증 결과를 TokenStatus로 반환
+    // token 검증 결과를 TokenStatus로 반환
     public TokenStatus validateToken(String token) {
 
         try {
@@ -80,21 +76,31 @@ public class TokenProvider {
         }
     }
 
-    // token을 소유한 User의 loginId 찾기
-    public String getLoginId(String token) {
-
-        Claims claims = jwtParser.parseSignedClaims(token).getPayload();
-
-        return claims.getSubject();
+    // token의 claim 추출
+    private Claims getClaims(String token) {
+        return jwtParser
+                .parseSignedClaims(token)
+                .getPayload();
     }
 
+    // 검증 완료된 token을 소유한 User 정보 복구
+    public User getTokenDetails(String token) {
 
-    // 검증 완료된 토큰을 가진 사용자에 대하여 인증 객체 생성
-    public Authentication getAuthentication(String token) {
+        Claims claims = getClaims(token);
 
-        String loginId = getLoginId(token);
+        return User.of(
+                claims.get(CLAIM_ID, Long.class),
+                claims.getSubject(),
+                null,
+                claims.get(CLAIM_NAME, String.class),
+                Role.valueOf(claims.get(CLAIM_ROLE, String.class))
+        );
+    }
 
-        CustomUserDetails principal = customUserDetailsService.loadUserByUsername(loginId);
+    // 검증 완료된 토큰을 가진 User에 대하여 인증 객체 생성
+    public Authentication getAuthentication(User user, String token) {
+
+        CustomUserDetails principal = new CustomUserDetails(user);
 
         return new UsernamePasswordAuthenticationToken(principal, token, principal.getAuthorities());
     }
