@@ -1,7 +1,7 @@
 package com.example.delivery_project.dto.response;
 
 import com.example.delivery_project.domain.entity.delivery.DeliveryItem;
-import com.example.delivery_project.domain.entity.enums.ProductType;
+import com.example.delivery_project.enums.ProductType;
 
 public record DeliveryItemResponse(
         Long itemId,
