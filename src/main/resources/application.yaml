@@ -9,3 +9,7 @@ spring:
 weather:
   api:
     key: ${WEATHER_API_KEY}
+
+kakao:
+  local:
+    key: ${KAKAO_LOCAL_API_KEY}
