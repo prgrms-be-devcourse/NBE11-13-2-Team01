@@ -14,7 +14,6 @@ import java.util.Set;
 
 @Component
 public class DijkstraRouteOptimizer implements RouteOptimizer {
-
     @Override
     public OptimizedRoute optimize(
             RouteOptimizationContext context
@@ -76,14 +75,12 @@ public class DijkstraRouteOptimizer implements RouteOptimizer {
             SearchNode node,
             Map<RouteState, Long> minimumDurationByState
     ) {
-        long minimumDuration =
-                minimumDurationByState.getOrDefault(
+        long minimumDuration = minimumDurationByState.getOrDefault(
                         node.state(),
                         Long.MAX_VALUE
                 );
 
-        return node.totalDurationSeconds()
-                > minimumDuration;
+        return node.totalDurationSeconds() > minimumDuration;
     }
 
     private boolean visitedEveryCandidate(
@@ -136,9 +133,7 @@ public class DijkstraRouteOptimizer implements RouteOptimizer {
             return;
         }
 
-        Set<Long> nextVisitedStopIds = new HashSet<>(
-                current.state().visitedStopIds()
-        );
+        Set<Long> nextVisitedStopIds = new HashSet<>(current.state().visitedStopIds());
         nextVisitedStopIds.add(nextStopId);
 
         List<Long> nextStopOrder = new ArrayList<>(current.stopOrder());
@@ -178,7 +173,6 @@ public class DijkstraRouteOptimizer implements RouteOptimizer {
             Long currentStopId,
             Set<Long> visitedStopIds
     ) {
-
         private RouteState {
             visitedStopIds = Set.copyOf(
                     visitedStopIds
@@ -191,7 +185,6 @@ public class DijkstraRouteOptimizer implements RouteOptimizer {
             List<Long> stopOrder,
             long totalDurationSeconds
     ) {
-
         private SearchNode {
             stopOrder = List.copyOf(stopOrder);
         }
