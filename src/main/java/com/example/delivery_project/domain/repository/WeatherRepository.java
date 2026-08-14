@@ -9,8 +9,24 @@ import org.springframework.data.repository.query.Param;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.List;
 
 public interface WeatherRepository extends JpaRepository<Weather, Long> {
+
+    // 특정 좌표/시각에서 지정한 category들만 조회 (예: T1H, RN1, PTY)
+    List<Weather> findByNxAndNyAndFcstDateAndFcstTimeAndCategoryIn(
+            Integer nx,
+            Integer ny,
+            LocalDate fcstDate,
+            LocalTime fcstTime,
+            List<String> categories
+    );
+
+    List<GridCoordinate> findDistinctBy();
+
+    // db에 존재하는 nx, ny 좌표를 중복 없이 조회
+    @Query("SELECT DISTINCT new com.example.delivery_project.domain.repository.GridCoordinate(w.nx, w.ny) FROM Weather w")
+    List<GridCoordinate> findDistinctGridCoordinates();
 
     @Modifying
     @Query("""
