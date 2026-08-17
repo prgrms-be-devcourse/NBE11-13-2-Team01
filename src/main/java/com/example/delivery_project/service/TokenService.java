@@ -38,7 +38,7 @@ public class TokenService {
         String refreshToken = tokenProvider.generateToken(user, jwtProperties.getRefreshTokenValidity());
 
        saveRefreshToken(user, refreshToken);
-        log.debug("[TOKEN] Token issued. userId: {}", user.getId());
+        log.debug("Token issued. userId: {}", user.getId());
 
         return new TokenPair(accessToken, refreshToken);
     }
@@ -93,7 +93,7 @@ public class TokenService {
 
         TokenPair tokenPair = issueToken(user);
 
-        log.debug("[TOKEN] Token refreshed. userId: {}", user.getId());
+        log.debug("Token refreshed. userId: {}", user.getId());
 
         return tokenPair;
     }
