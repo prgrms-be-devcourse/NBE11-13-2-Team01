@@ -30,14 +30,14 @@ public class User {
 
     public static User of(
             Long id,
-            String userId,
+            String loginId,
             String password,
             String name,
             Role role
     ) {
         User user =  new User();
         user.id = id;
-        user.loginId = userId;
+        user.loginId = loginId;
         user.password = password;
         user.name = name;
         user.role = role;
