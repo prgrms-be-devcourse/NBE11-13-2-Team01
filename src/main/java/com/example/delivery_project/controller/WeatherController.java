@@ -1,6 +1,5 @@
 package com.example.delivery_project.controller;
 
-import com.example.delivery_project.domain.entity.weather.Weather;
 import com.example.delivery_project.dto.request.WeatherRequest;
 import com.example.delivery_project.dto.response.WeatherResponse;
 import com.example.delivery_project.service.WeatherService;
