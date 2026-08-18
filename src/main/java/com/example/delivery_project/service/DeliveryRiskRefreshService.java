@@ -66,8 +66,7 @@ public class DeliveryRiskRefreshService {
                 stopsByCoordinate.size()
         );
 
-        for (Map.Entry<GridCoordinate, List<DeliveryStop>> entry
-                : stopsByCoordinate.entrySet()) {
+        for (Map.Entry<GridCoordinate, List<DeliveryStop>> entry : stopsByCoordinate.entrySet()) {
             refreshCoordinate(
                     entry.getKey(),
                     entry.getValue(),
