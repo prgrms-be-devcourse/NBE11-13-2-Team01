@@ -1,50 +1,36 @@
 package com.example.delivery_project.scheduler;
 
-import com.example.delivery_project.domain.repository.GridCoordinate;
-import com.example.delivery_project.dto.request.WeatherRequest;
-import com.example.delivery_project.service.WeatherService;
+import com.example.delivery_project.service.DeliveryRiskRefreshService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-import java.util.List;
 
 @Component
 @Slf4j
 @RequiredArgsConstructor
 public class WeatherBatchScheduler {
 
-    private final WeatherService weatherService;
+    private final DeliveryRiskRefreshService deliveryRiskRefreshService;
 
-    @Scheduled(cron="0 45 * * * *",zone="Asia/Seoul")
-    public void upsertWeather(){
-        log.info("[초단기예보 업데이트 시작]");
-        //1. 현재 db의 모든 nx,ny좌표에 대해서 현재 날짜/시간 기준으로 데이터를 다시 받아온다
-        //2. update한다.
-        LocalDateTime baseDateTime = LocalDateTime.now(ZoneId.of("Asia/Seoul"))
-                .withMinute(30).withSecond(0).withNano(0);
+    @EventListener(ApplicationReadyEvent.class)
+    public void refreshOnStartup() {
+        refresh("애플리케이션 시작");
+    }
 
-        String baseTime= baseDateTime.format(DateTimeFormatter.ofPattern("HHmm")); //hhmm 형식
-        String baseDate=baseDateTime.format(DateTimeFormatter.BASIC_ISO_DATE); //yyyymmdd 형식
+    @Scheduled(cron = "0 45 * * * *", zone = "Asia/Seoul")
+    public void refreshHourly() {
+        refresh("매시 45분 배치");
+    }
 
-        List<GridCoordinate> gridCoordinates = weatherService.getGridCoordinates();
-
-        //모든 격자좌표에 대해서 업데이트
-        for(GridCoordinate coordinate : gridCoordinates){
-            int nx=coordinate.nx();
-            int ny=coordinate.ny();
-
-            weatherService.save(WeatherRequest.builder()
-                    .baseDate(baseDate)
-                    .baseTime(baseTime)
-                    .nx(nx)
-                    .ny(ny)
-                    .build());
+    private void refresh(String trigger) {
+        log.info("[날씨·위험도 갱신 시작] trigger={}", trigger);
+        try {
+            deliveryRiskRefreshService.refreshActiveStops();
+        } catch (Exception e) {
+            log.error("[날씨·위험도 갱신 실패] trigger={}", trigger, e);
         }
-
     }
 }

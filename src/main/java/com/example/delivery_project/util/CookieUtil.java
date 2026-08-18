@@ -32,6 +32,10 @@ public final class CookieUtil {
     ) {
         Cookie[] cookies = request.getCookies();
 
+        if (cookies == null) {
+            return;
+        }
+
         for(Cookie cookie : cookies) {
             if(name.equals(cookie.getName())) {
                 cookie.setMaxAge(0);
