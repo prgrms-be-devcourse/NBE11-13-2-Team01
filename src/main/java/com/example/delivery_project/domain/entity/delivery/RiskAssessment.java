@@ -43,7 +43,7 @@ public class RiskAssessment {
     @Column(nullable = false)
     private LocalDateTime analyzedAt;
 
-    static RiskAssessment of(
+    public static RiskAssessment of(
             DeliveryStop stop,
             LocalDateTime analyzedAt
     ) {
@@ -68,7 +68,7 @@ public class RiskAssessment {
         recalculateRiskLevel();
     }
 
-    void addFactor(
+    public void addFactor(
             RiskFactorType type,
             String description
     ) {
