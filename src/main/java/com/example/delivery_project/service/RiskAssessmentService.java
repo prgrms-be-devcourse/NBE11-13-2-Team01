@@ -3,12 +3,15 @@ package com.example.delivery_project.service;
 import com.example.delivery_project.domain.entity.delivery.DeliveryStop;
 import com.example.delivery_project.domain.entity.delivery.RiskAssessment;
 import com.example.delivery_project.domain.entity.delivery.RiskFactor;
+import com.example.delivery_project.domain.repository.DeliveryStopRepository;
 import com.example.delivery_project.enums.RiskFactorType;
 import com.example.delivery_project.enums.RiskLevel;
 import com.example.delivery_project.domain.entity.weather.Weather;
 import com.example.delivery_project.domain.repository.RiskAssessmentRepository;
 import com.example.delivery_project.domain.repository.RiskFactorRepository;
 import com.example.delivery_project.domain.repository.WeatherRepository;
+import com.example.delivery_project.exception.DeliveryException;
+import com.example.delivery_project.exception.global.BusinessException;
 import com.example.delivery_project.service.component.LocationConverter;
 import com.example.delivery_project.service.component.RiskFactorCalculator;
 import lombok.RequiredArgsConstructor;
@@ -38,6 +41,7 @@ public class RiskAssessmentService {
     private final RiskFactorCalculator riskFactorCalculator;
     private final RiskAssessmentRepository riskAssessmentRepository;
     private final RiskFactorRepository riskFactorRepository;
+    private final DeliveryStopRepository deliveryStopRepository;
 
     @Transactional
     //List로 받아서 처리
@@ -56,15 +60,7 @@ public class RiskAssessmentService {
         //deliveryStop에 대한 날씨 카테고리 key-value Map 생성
         Map<String, String> weatherValues = fetchWeatherValues(deliveryStop);
 
-        List<RiskFactorType> types = new ArrayList<>();
-
-        //각 RiskFactorType에 해당하면 List에 추가만 진행. RiskFactor는 RiskAssessment 생성 후에 생성.
-        if (riskFactorCalculator.isHeavyRain(weatherValues.get(RISK_CATEGORIES.get(1)), weatherValues.get(RISK_CATEGORIES.get(2)))) {
-            types.add(RiskFactorType.HEAVY_RAIN);
-        }
-        if (riskFactorCalculator.isHeatWave(weatherValues.get(RISK_CATEGORIES.get(0)))) {
-            types.add(RiskFactorType.HEAT_WAVE);
-        }
+        List<RiskFactorType> types = determineTypes(weatherValues);
 
         int riskScore = calcScore(types);
 
@@ -83,43 +79,37 @@ public class RiskAssessmentService {
         deliveryStop.attachRiskAssessment(assessment);
 
 
-        //08/14 기준 미비한 부분 :
-        //1. 기존 RiskAssessment가 존재하는가? : unique 제약이 걸려있어 확인이 필요 : findBy
-        //3. RiskAssessment update 마다, RiskFactor 정리가 필요
-
     }
 
     @Transactional
-    public void updateRiskAssessment(DeliveryStop deliveryStop){
+    public void updateRiskAssessment(Long deliveryStopId){
+        DeliveryStop deliveryStop = deliveryStopRepository.findById(deliveryStopId)
+                .orElseThrow(()->new BusinessException(DeliveryException.DELIVERY_STOP_NOT_FOUND));
+
         //1. 날씨 데이터 다시 db에서 꺼내서 확인
         Map<String,String> weatherValues = fetchWeatherValues(deliveryStop);
-        Optional<RiskAssessment> riskAssessment = riskAssessmentRepository.findByDeliveryStopId(deliveryStop.getId());
+        log.info("weatherValues isEmpty={}, size={}", weatherValues.isEmpty(), weatherValues.size());
+        weatherValues.forEach((key, value) -> log.info("weatherValues[{}] = {}", key, value));
+        // List<RiskFactorType> types = determineTypes(weatherValues);
+        // weatherValues에 PTY 등이 없으면 NumberFormatException 발생 (RiskFactorCalculator.isRain null 처리 필요) + newTypes에서 안 씀
 
+        RiskAssessment riskAssessment = deliveryStop.getRiskAssessment();
+
+        List<RiskFactorType> newTypes = new ArrayList<>();
+        newTypes.add(RiskFactorType.HEAT_WAVE);
         //2. RiskFactor 삭제 or 추가
-        riskFactorRepository.deleteAll();
         //새로운 날씨에 대한 새로운 List<RiskFactor>
-
-
-        //현재 List<RiskFactor>
-        //변경점 :
-
-
-        List<RiskFactorType> types = new ArrayList<>();
-
-        //각 RiskFactorType에 해당하면 List에 추가만 진행. RiskFactor는 RiskAssessment 생성 후에 생성.
-        if (riskFactorCalculator.isHeavyRain(weatherValues.get(RISK_CATEGORIES.get(1)), weatherValues.get(RISK_CATEGORIES.get(2)))) {
-            types.add(RiskFactorType.HEAVY_RAIN);
-        }
-        if (riskFactorCalculator.isHeatWave(weatherValues.get(RISK_CATEGORIES.get(0)))) {
-
-            types.add(RiskFactorType.HEAT_WAVE);
-        }
-
-        int riskScore = calcScore(types);
-
         //3. RiskFactor 바탕으로 RiskAssessment 업데이트
 
+        riskAssessment.updateFactors(newTypes); //analyzedAt이 최신화 안됨
 
+    }
+    public RiskLevel getRiskLevel(Long deliveryStopId){
+        DeliveryStop deliveryStop = deliveryStopRepository.findById(deliveryStopId)
+                .orElseThrow(()-> new BusinessException(DeliveryException.DELIVERY_STOP_NOT_FOUND));
+
+        RiskAssessment assessment = deliveryStop.getRiskAssessment();
+        return assessment.getLevel();
     }
 
     // DeliveryStop의 좌표 기준, 현재 날짜/시간에 해당하는 T1H, RN1, PTY 값을 조회
@@ -148,5 +138,17 @@ public class RiskAssessmentService {
         return types.stream()
                 .mapToInt(RiskFactorType::getRiskScore)
                 .sum();
+    }
+    //1. 에러 처리 필요 : weatherValue에 null이 들어왔을 경우
+    private List<RiskFactorType> determineTypes(Map<String,String> weatherValues){
+        List<RiskFactorType> types = new ArrayList<>();
+        //각 RiskFactorType에 해당하면 List에 추가만 진행. RiskFactor는 RiskAssessment 생성 후에 생성.
+        if (riskFactorCalculator.isHeavyRain(weatherValues.get(RISK_CATEGORIES.get(1)), weatherValues.get(RISK_CATEGORIES.get(2)))) {
+            types.add(RiskFactorType.HEAVY_RAIN);
+        }
+        if (riskFactorCalculator.isHeatWave(weatherValues.get(RISK_CATEGORIES.get(0)))) {
+            types.add(RiskFactorType.HEAT_WAVE);
+        }
+        return types;
     }
 }

@@ -32,6 +32,7 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
             // TODO 아직 미구현~~
         }
 
+        filterChain.doFilter(request, response);
     }
 
     // request의 Authorization 헤더에서 access token 추출

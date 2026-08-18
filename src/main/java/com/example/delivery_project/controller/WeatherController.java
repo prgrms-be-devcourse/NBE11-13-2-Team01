@@ -1,8 +1,12 @@
 package com.example.delivery_project.controller;
 
+import com.example.delivery_project.domain.entity.delivery.RiskAssessment;
 import com.example.delivery_project.domain.entity.weather.Weather;
+import com.example.delivery_project.domain.repository.DeliveryStopRepository;
 import com.example.delivery_project.dto.request.WeatherRequest;
+import com.example.delivery_project.dto.response.DeliveryStopResponse;
 import com.example.delivery_project.dto.response.WeatherResponse;
+import com.example.delivery_project.service.RiskAssessmentService;
 import com.example.delivery_project.service.WeatherService;
 import com.example.delivery_project.service.component.WeatherProvider;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +18,8 @@ import org.springframework.web.bind.annotation.*;
 public class WeatherController {
     private final WeatherProvider weatherProvider;
     private final WeatherService weatherService;
+    private final RiskAssessmentService riskAssessmentService;
+
 
     @GetMapping
     public WeatherResponse test(@RequestBody WeatherRequest request) throws Exception {
@@ -25,5 +31,9 @@ public class WeatherController {
         weatherService.save(request);
     }
 
+    @PostMapping("/update/{id}")
+    public void test3(@PathVariable Long id){
+        riskAssessmentService.updateRiskAssessment(id);
+    }
 
 }

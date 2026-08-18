@@ -85,4 +85,8 @@ public class RiskAssessment {
                 .sum();
         this.level = RiskLevel.from(totalScore);
     }
+    public void updateFactors(List<RiskFactorType>  types){
+        riskFactors.clear();
+        types.forEach(type-> addFactor(type,type.getDescription()));
+    }
 }
