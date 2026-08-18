@@ -18,6 +18,7 @@ DROP TABLE IF EXISTS delivery_stop;
 DROP TABLE IF EXISTS delivery_plan;
 DROP TABLE IF EXISTS refresh_token;
 DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS weather;
 
 -- ------------------------------------------------------------
 -- users
@@ -131,3 +132,20 @@ CREATE INDEX idx_delivery_item_stop
 
 CREATE INDEX idx_risk_factor_assessment
     ON risk_factor (risk_assessment_id);
+
+-- ------------------------------------------------------------
+-- weather
+-- ------------------------------------------------------------
+CREATE TABLE weather (
+                         id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+                         nx          INT          NOT NULL,
+                         ny          INT          NOT NULL,
+                         fcst_date   DATE         NOT NULL,
+                         fcst_time   TIME         NOT NULL,
+                         base_date   DATE         NOT NULL,
+                         base_time   TIME         NOT NULL,
+                         category    VARCHAR(10)  NOT NULL,
+                         fcst_value  VARCHAR(50)  NOT NULL,
+                         fetched_at  DATETIME(6)  NOT NULL,
+                         CONSTRAINT uk_weather_slot UNIQUE (nx, ny, fcst_date, fcst_time, category)
+) ENGINE=InnoDB;
