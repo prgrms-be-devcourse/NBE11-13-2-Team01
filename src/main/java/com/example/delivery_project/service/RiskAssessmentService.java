@@ -29,6 +29,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class RiskAssessmentService {
 
     private static final List<String> RISK_CATEGORIES = List.of("T1H", "RN1", "PTY");
@@ -38,6 +39,7 @@ public class RiskAssessmentService {
     private final RiskAssessmentRepository riskAssessmentRepository;
     private final RiskFactorRepository riskFactorRepository;
 
+    @Transactional
     //List로 받아서 처리
     public void saveAssessments(List<DeliveryStop> deliveryStopList){
         for(DeliveryStop stop: deliveryStopList){
@@ -67,7 +69,7 @@ public class RiskAssessmentService {
         int riskScore = calcScore(types);
 
         // 1. RiskAssessment 먼저 생성 후 저장 (id가 생겨야 RiskFactor의 FK로 쓸 수 있음)
-        RiskAssessment assessment = RiskAssessment.of(deliveryStop, LocalDateTime.now());
+        RiskAssessment assessment = deliveryStop.getRiskAssessment();
         riskAssessmentRepository.save(assessment);
 
 
@@ -87,6 +89,7 @@ public class RiskAssessmentService {
 
     }
 
+    @Transactional
     public void updateRiskAssessment(DeliveryStop deliveryStop){
         //1. 날씨 데이터 다시 db에서 꺼내서 확인
         Map<String,String> weatherValues = fetchWeatherValues(deliveryStop);
@@ -95,6 +98,7 @@ public class RiskAssessmentService {
         //2. RiskFactor 삭제 or 추가
         riskFactorRepository.deleteAll();
         //새로운 날씨에 대한 새로운 List<RiskFactor>
+
 
         //현재 List<RiskFactor>
         //변경점 :
@@ -114,8 +118,6 @@ public class RiskAssessmentService {
         int riskScore = calcScore(types);
 
         //3. RiskFactor 바탕으로 RiskAssessment 업데이트
-
-
 
 
     }
