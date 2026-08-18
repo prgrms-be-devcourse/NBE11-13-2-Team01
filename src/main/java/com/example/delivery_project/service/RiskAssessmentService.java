@@ -3,8 +3,8 @@ package com.example.delivery_project.service;
 import com.example.delivery_project.domain.entity.delivery.DeliveryStop;
 import com.example.delivery_project.domain.entity.delivery.RiskAssessment;
 import com.example.delivery_project.domain.entity.delivery.RiskFactor;
-import com.example.delivery_project.domain.entity.enums.RiskFactorType;
-import com.example.delivery_project.domain.entity.enums.RiskLevel;
+import com.example.delivery_project.enums.RiskFactorType;
+import com.example.delivery_project.enums.RiskLevel;
 import com.example.delivery_project.domain.entity.weather.Weather;
 import com.example.delivery_project.domain.repository.RiskAssessmentRepository;
 import com.example.delivery_project.domain.repository.RiskFactorRepository;
@@ -67,14 +67,15 @@ public class RiskAssessmentService {
         int riskScore = calcScore(types);
 
         // 1. RiskAssessment 먼저 생성 후 저장 (id가 생겨야 RiskFactor의 FK로 쓸 수 있음)
-        RiskAssessment assessment = RiskAssessment.of(deliveryStop, riskScore);
+        RiskAssessment assessment = RiskAssessment.of(deliveryStop, LocalDateTime.now());
         riskAssessmentRepository.save(assessment);
 
+
         // 2. 이제 id가 생긴 assessment로 RiskFactor들 생성 후 저장
-        List<RiskFactor> riskFactors = types.stream()
-                .map(type -> assessment.addRiskFactor(type, type.getDescription()))
-                .toList();
-        riskFactorRepository.saveAll(riskFactors);
+        for(RiskFactorType factorType: types){
+            assessment.addFactor(factorType, factorType.getDescription());
+        }
+        riskFactorRepository.saveAll(assessment.getRiskFactors());
 
         // 3. 도메인 모델 일관성을 위해 연결 : db-메모리 같은 상태 유지를 위해
         deliveryStop.attachRiskAssessment(assessment);

@@ -11,6 +11,8 @@ import com.example.delivery_project.dto.response.DeliveryPlanDetailResponse;
 import com.example.delivery_project.dto.response.DeliveryPlanSummaryResponse;
 import com.example.delivery_project.dto.response.DeliveryStopResponse;
 import com.example.delivery_project.dto.request.WeatherRequest;
+import com.example.delivery_project.exception.DeliveryException;
+import com.example.delivery_project.exception.global.BusinessException;
 import com.example.delivery_project.service.component.LocationConverter;
 import com.example.delivery_project.service.component.WeatherUpdater;
 import lombok.RequiredArgsConstructor;
@@ -88,8 +90,6 @@ public class DeliveryPlanService {
         DeliveryPlan plan = getPlanIfExists(planId);
         log.info("{} 배송 시작 요청 planId: {}", PLAN, planId);
         // TODO 커스텀 예외로 변경
-        DeliveryPlan plan = deliveryPlanRepository.findById(planId)
-                .orElseThrow(IllegalStateException::new);
 
         upsertWeatherForPlan(plan);
 

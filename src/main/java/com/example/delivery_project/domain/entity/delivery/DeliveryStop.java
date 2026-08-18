@@ -136,5 +136,8 @@ public class DeliveryStop {
         }
         this.status = DeliveryStopStatus.DELIVERING;
     }
+    public void attachRiskAssessment(RiskAssessment riskAssessment){
+        this.riskAssessment=riskAssessment;
+    }
 
 }
