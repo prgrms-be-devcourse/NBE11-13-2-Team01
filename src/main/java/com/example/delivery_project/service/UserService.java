@@ -2,8 +2,8 @@ package com.example.delivery_project.service;
 
 import com.example.delivery_project.domain.entity.user.User;
 import com.example.delivery_project.domain.repository.UserRepository;
-import com.example.delivery_project.dto.request.JoinRequest;
-import com.example.delivery_project.dto.request.LoginRequest;
+import com.example.delivery_project.dto.request.UserJoinRequest;
+import com.example.delivery_project.dto.request.UserLoginRequest;
 import com.example.delivery_project.exception.AuthException;
 import com.example.delivery_project.exception.global.BusinessException;
 import com.example.delivery_project.security.auth.CustomUserDetails;
@@ -29,7 +29,7 @@ public class UserService {
     private final TokenService tokenService;
 
     @Transactional
-    public void join(JoinRequest request) {
+    public void join(UserJoinRequest request) {
 
         // 로그인 아이디 중복 검사
         if(userRepository.existsByLoginId(request.loginId())) {
@@ -43,7 +43,7 @@ public class UserService {
     }
 
     @Transactional
-    public TokenService.TokenPair login(LoginRequest request) {
+    public TokenService.TokenPair login(UserLoginRequest request) {
 
         try {
             Authentication authentication = authenticationManager.authenticate(

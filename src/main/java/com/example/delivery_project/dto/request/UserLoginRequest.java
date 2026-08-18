@@ -2,7 +2,7 @@ package com.example.delivery_project.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
 
-public record LoginRequest(
+public record UserLoginRequest(
         @NotBlank(message = "아이디는 필수입니다.")
         String loginId,
 

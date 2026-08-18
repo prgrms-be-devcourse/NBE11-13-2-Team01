@@ -1,6 +1,6 @@
 package com.example.delivery_project.dto.response;
 
-public record LoginResponse(
+public record UserLoginResponse(
         String accessToken
         // TODO 프론트 작업하면서 response 형식 확정
         // 프론트에서 사용자 정보 사용할거면
