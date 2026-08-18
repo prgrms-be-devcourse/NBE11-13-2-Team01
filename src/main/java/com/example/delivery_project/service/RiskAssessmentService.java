@@ -23,6 +23,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -37,6 +38,7 @@ public class RiskAssessmentService {
     private final RiskAssessmentRepository riskAssessmentRepository;
     private final RiskFactorRepository riskFactorRepository;
 
+    //List로 받아서 처리
     public void saveAssessments(List<DeliveryStop> deliveryStopList){
         for(DeliveryStop stop: deliveryStopList){
             try{
@@ -79,12 +81,43 @@ public class RiskAssessmentService {
 
 
         //08/14 기준 미비한 부분 :
-        //1. 기존 RiskAssessment가 존재하는가? : unique 제약이 걸려있어 확인이 필요
-        //2. RiskAssessment의 값을 변경하는 메서드(현재는 of로 생성만 가능함)
+        //1. 기존 RiskAssessment가 존재하는가? : unique 제약이 걸려있어 확인이 필요 : findBy
         //3. RiskAssessment update 마다, RiskFactor 정리가 필요
 
     }
 
+    public void updateRiskAssessment(DeliveryStop deliveryStop){
+        //1. 날씨 데이터 다시 db에서 꺼내서 확인
+        Map<String,String> weatherValues = fetchWeatherValues(deliveryStop);
+        Optional<RiskAssessment> riskAssessment = riskAssessmentRepository.findByDeliveryStopId(deliveryStop.getId());
+
+        //2. RiskFactor 삭제 or 추가
+        riskFactorRepository.deleteAll();
+        //새로운 날씨에 대한 새로운 List<RiskFactor>
+
+        //현재 List<RiskFactor>
+        //변경점 :
+
+
+        List<RiskFactorType> types = new ArrayList<>();
+
+        //각 RiskFactorType에 해당하면 List에 추가만 진행. RiskFactor는 RiskAssessment 생성 후에 생성.
+        if (riskFactorCalculator.isHeavyRain(weatherValues.get(RISK_CATEGORIES.get(1)), weatherValues.get(RISK_CATEGORIES.get(2)))) {
+            types.add(RiskFactorType.HEAVY_RAIN);
+        }
+        if (riskFactorCalculator.isHeatWave(weatherValues.get(RISK_CATEGORIES.get(0)))) {
+
+            types.add(RiskFactorType.HEAT_WAVE);
+        }
+
+        int riskScore = calcScore(types);
+
+        //3. RiskFactor 바탕으로 RiskAssessment 업데이트
+
+
+
+
+    }
 
     // DeliveryStop의 좌표 기준, 현재 날짜/시간에 해당하는 T1H, RN1, PTY 값을 조회
     private Map<String, String> fetchWeatherValues(DeliveryStop deliveryStop) {
