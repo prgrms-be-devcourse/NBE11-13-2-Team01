@@ -32,6 +32,25 @@ CREATE TABLE users (
                        CONSTRAINT uk_users_login_id UNIQUE (login_id)
 ) ENGINE=InnoDB;
 
+-- ============================================================
+-- 관리자 테스트 계정
+-- loginId: admin
+-- password: 1234
+-- ============================================================
+
+INSERT INTO users (
+    login_id,
+    password,
+    name,
+    role
+)
+VALUES (
+           'admin',
+           '$2y$10$Z3CLfcNpZ2VZag4YoSHUj.Ku3NmM6ZFhMywRmazbw1nmBi4KTO4hi',
+           '관리자',
+           'ROLE_ADMIN'
+       );
+
 -- ------------------------------------------------------------
 -- refresh_token
 -- ------------------------------------------------------------

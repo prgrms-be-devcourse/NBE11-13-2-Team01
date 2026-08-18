@@ -21,7 +21,7 @@ public class TokenController {
     private final JwtProperties jwtProperties;
 
     @PostMapping("/refresh")
-    public ResponseEntity<TokenResponse> refreshToken(
+    public TokenResponse refreshToken(
             HttpServletRequest request,
             HttpServletResponse response
     ) {
@@ -38,6 +38,6 @@ public class TokenController {
         );
 
         // access token은 response body에
-        return ResponseEntity.ok(new TokenResponse(tokenPair.accessToken()));
+        return new TokenResponse(tokenPair.accessToken());
     }
 }
