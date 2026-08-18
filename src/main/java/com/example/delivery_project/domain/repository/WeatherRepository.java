@@ -22,11 +22,13 @@ public interface WeatherRepository extends JpaRepository<Weather, Long> {
             List<String> categories
     );
 
-    List<GridCoordinate> findDistinctBy();
-
-    // db에 존재하는 nx, ny 좌표를 중복 없이 조회
-    @Query("SELECT DISTINCT new com.example.delivery_project.domain.repository.GridCoordinate(w.nx, w.ny) FROM Weather w")
-    List<GridCoordinate> findDistinctGridCoordinates();
+    List<Weather> findByNxAndNyAndFcstDateBetweenAndCategoryIn(
+            Integer nx,
+            Integer ny,
+            LocalDate startDate,
+            LocalDate endDate,
+            List<String> categories
+    );
 
     @Modifying
     @Query("""

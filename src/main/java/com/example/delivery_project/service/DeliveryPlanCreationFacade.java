@@ -8,14 +8,18 @@ import com.example.delivery_project.domain.repository.UserRepository;
 import com.example.delivery_project.dto.request.CreateDeliveryItemRequest;
 import com.example.delivery_project.dto.request.CreateDeliveryPlanRequest;
 import com.example.delivery_project.dto.request.CreateDeliveryStopRequest;
-import com.example.delivery_project.dto.response.WeatherRiskResponse;
+import com.example.delivery_project.event.DeliveryPlanCreatedEvent;
 import com.example.delivery_project.exception.ExceptionCode;
 import com.example.delivery_project.exception.global.BusinessException;
 import com.example.delivery_project.service.component.GeocodingClient;
 import com.example.delivery_project.service.component.LocationMapper;
-import com.example.delivery_project.spec.*;
+import com.example.delivery_project.spec.DeliveryItemSpec;
+import com.example.delivery_project.spec.DeliveryStopSpec;
+import com.example.delivery_project.spec.GeocodedLocation;
+import com.example.delivery_project.spec.Location;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,29 +35,21 @@ public class DeliveryPlanCreationFacade {
     private final DeliveryPlanRepository deliveryPlanRepository;
     private final GeocodingClient geocodingClient;
     private final LocationMapper locationMapper;
+    private final ApplicationEventPublisher eventPublisher;
 
     public Long create(
             Long driverId,
-            CreateDeliveryPlanRequest request,
-            WeatherRiskResponse weatherRisk
+            CreateDeliveryPlanRequest request
     ) {
         User driver = getDriver(driverId);
 
-        Location departureLocation =
-                resolveLocation(request.departureAddress());
+        Location departureLocation = resolveLocation(
+                request.departureAddress()
+        );
 
-        List<RiskFactorSpec> riskFactorSpecs =
-                toRiskFactorSpecs(weatherRisk);
-
-        List<DeliveryStopSpec> stopSpecs =
-                request.stops().stream()
-                        .map(stopRequest ->
-                                toStopSpec(
-                                        stopRequest,
-                                        riskFactorSpecs
-                                )
-                        )
-                        .toList();
+        List<DeliveryStopSpec> stopSpecs = request.stops().stream()
+                .map(this::toStopSpec)
+                .toList();
 
         DeliveryPlan plan = DeliveryPlanFactory.create(
                 driver,
@@ -62,8 +58,7 @@ public class DeliveryPlanCreationFacade {
                 stopSpecs
         );
 
-        DeliveryPlan savedPlan =
-                deliveryPlanRepository.save(plan);
+        DeliveryPlan savedPlan = deliveryPlanRepository.save(plan);
 
         log.info(
                 "[PLAN] 생성 완료 planId: {}, driverId: {}",
@@ -71,25 +66,26 @@ public class DeliveryPlanCreationFacade {
                 driverId
         );
 
+        eventPublisher.publishEvent(
+                new DeliveryPlanCreatedEvent(savedPlan.getId())
+        );
+
         return savedPlan.getId();
     }
 
     private DeliveryStopSpec toStopSpec(
-            CreateDeliveryStopRequest request,
-            List<RiskFactorSpec> riskFactorSpecs
+            CreateDeliveryStopRequest request
     ) {
-        Location location =
-                resolveLocation(request.address());
+        Location location = resolveLocation(request.address());
 
-        List<DeliveryItemSpec> itemSpecs =
-                request.items().stream()
-                        .map(this::toItemSpec)
-                        .toList();
+        List<DeliveryItemSpec> itemSpecs = request.items().stream()
+                .map(this::toItemSpec)
+                .toList();
 
         return new DeliveryStopSpec(
                 location,
                 itemSpecs,
-                riskFactorSpecs
+                List.of()
         );
     }
 
@@ -108,17 +104,6 @@ public class DeliveryPlanCreationFacade {
                 request.productType(),
                 request.quantity()
         );
-    }
-
-    private List<RiskFactorSpec> toRiskFactorSpecs(
-            WeatherRiskResponse response
-    ) {
-        return response.factors().stream()
-                .map(factor -> new RiskFactorSpec(
-                        factor.type(),
-                        factor.description()
-                ))
-                .toList();
     }
 
     private User getDriver(Long driverId) {
