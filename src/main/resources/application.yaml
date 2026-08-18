@@ -9,6 +9,10 @@ spring:
 weather:
   api:
     key: ${WEATHER_API_KEY}
+
+kakao:
+  local:
+    key: ${KAKAO_LOCAL_API_KEY}
 jwt:
   issuer: delivery-insight
   # openssl rand -base64 64 | tr -d '\n'
