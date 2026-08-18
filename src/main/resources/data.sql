@@ -1,8 +1,9 @@
 -- ============================================================
 -- delivery_service DB 및 테이블 생성 스크립트
 -- 엔티티 기준: User, DeliveryPlan, DeliveryStop, DeliveryItem,
---             RiskAssessment, RiskFactor
+--             RiskAssessment, RiskFactor, RefreshToken
 -- ============================================================
+
 CREATE DATABASE IF NOT EXISTS delivery_service
     DEFAULT CHARACTER SET utf8mb4
     DEFAULT COLLATE utf8mb4_unicode_ci;
@@ -15,6 +16,7 @@ DROP TABLE IF EXISTS risk_assessment;
 DROP TABLE IF EXISTS delivery_item;
 DROP TABLE IF EXISTS delivery_stop;
 DROP TABLE IF EXISTS delivery_plan;
+DROP TABLE IF EXISTS refresh_token;
 DROP TABLE IF EXISTS users;
 DROP TABLE IF EXISTS weather;
 
@@ -28,6 +30,21 @@ CREATE TABLE users (
                        name      VARCHAR(255) NOT NULL,
                        role      VARCHAR(30)  NOT NULL,
                        CONSTRAINT uk_users_login_id UNIQUE (login_id)
+) ENGINE=InnoDB;
+
+-- ------------------------------------------------------------
+-- refresh_token
+-- ------------------------------------------------------------
+CREATE TABLE refresh_token (
+                               id       BIGINT AUTO_INCREMENT PRIMARY KEY,
+                               user_id  BIGINT       NOT NULL,
+                               token    VARCHAR(1000) CHARACTER SET ascii NOT NULL,
+
+                               CONSTRAINT uk_refresh_token_user UNIQUE (user_id),
+                               CONSTRAINT uk_refresh_token_token UNIQUE (token),
+
+                               CONSTRAINT fk_refresh_token_user
+                                   FOREIGN KEY (user_id) REFERENCES users (id)
 ) ENGINE=InnoDB;
 
 -- ------------------------------------------------------------
@@ -57,13 +74,16 @@ CREATE INDEX idx_delivery_plan_driver_created
 CREATE TABLE delivery_stop (
                                id                BIGINT AUTO_INCREMENT PRIMARY KEY,
                                delivery_plan_id  BIGINT       NOT NULL,
+                               sequence          INT,
                                status            VARCHAR(30)  NOT NULL,
                                address           VARCHAR(255) NOT NULL,
                                latitude          DOUBLE       NOT NULL,
                                longitude         DOUBLE       NOT NULL,
                                completed_at      DATETIME(6),
+
                                CONSTRAINT fk_delivery_stop_plan
-                                   FOREIGN KEY (delivery_plan_id) REFERENCES delivery_plan (id)
+                                   FOREIGN KEY (delivery_plan_id)
+                                       REFERENCES delivery_plan (id)
 ) ENGINE=InnoDB;
 
 CREATE INDEX idx_delivery_stop_plan
@@ -88,7 +108,6 @@ CREATE TABLE delivery_item (
 CREATE TABLE risk_assessment (
                                  id                BIGINT AUTO_INCREMENT PRIMARY KEY,
                                  delivery_stop_id  BIGINT      NOT NULL,
-                                 risk_score        INT         NOT NULL,
                                  level             VARCHAR(30) NOT NULL,
                                  analyzed_at       DATETIME(6) NOT NULL,
                                  CONSTRAINT uk_risk_assessment_stop UNIQUE (delivery_stop_id),
@@ -107,6 +126,12 @@ CREATE TABLE risk_factor (
                              CONSTRAINT fk_risk_factor_assessment
                                  FOREIGN KEY (risk_assessment_id) REFERENCES risk_assessment (id)
 ) ENGINE=InnoDB;
+
+CREATE INDEX idx_delivery_item_stop
+    ON delivery_item (delivery_stop_id);
+
+CREATE INDEX idx_risk_factor_assessment
+    ON risk_factor (risk_assessment_id);
 
 -- ------------------------------------------------------------
 -- weather

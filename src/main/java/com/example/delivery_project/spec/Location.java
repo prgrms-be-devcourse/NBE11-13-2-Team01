@@ -1,4 +1,4 @@
-package com.example.delivery_project.domain.entity.delivery.spec;
+package com.example.delivery_project.spec;
 
 public record Location(
         String address,

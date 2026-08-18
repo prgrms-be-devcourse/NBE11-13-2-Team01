@@ -1,18 +1,19 @@
 package com.example.delivery_project.domain.entity.delivery;
 
-import com.example.delivery_project.domain.entity.enums.RiskFactorType;
-import com.example.delivery_project.domain.entity.enums.RiskLevel;
+import com.example.delivery_project.enums.RiskFactorType;
+import com.example.delivery_project.enums.RiskLevel;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 @Entity
 @Getter
-@AllArgsConstructor(access = AccessLevel.PROTECTED)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class RiskAssessment {
     @Id
@@ -20,11 +21,20 @@ public class RiskAssessment {
     private Long id;
 
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "delivery_stop_id", nullable = false)
+    @JoinColumn(
+            name = "delivery_stop_id",
+            nullable = false,
+            unique = true
+    )
     private DeliveryStop deliveryStop;
 
-    @Column(nullable = false)
-    private Integer riskScore;
+    @OneToMany(
+            mappedBy = "riskAssessment",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    @Getter(AccessLevel.NONE)
+    private List<RiskFactor> riskFactors = new ArrayList<>();
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -33,44 +43,46 @@ public class RiskAssessment {
     @Column(nullable = false)
     private LocalDateTime analyzedAt;
 
+    static RiskAssessment of(
+            DeliveryStop stop,
+            LocalDateTime analyzedAt
+    ) {
+        RiskAssessment assessment = new RiskAssessment();
+        assessment.deliveryStop = stop;
+        assessment.analyzedAt = analyzedAt;
+        assessment.level = RiskLevel.from(0);
+        return assessment;
+    }
+
     boolean isDanger() {
         return level == RiskLevel.DANGER;
     }
 
-    public static RiskAssessment of(
-            DeliveryStop deliveryStop,
-            Integer riskScore
-    ){
-        RiskAssessment riskAssessment = new RiskAssessment();
-        riskAssessment.deliveryStop=deliveryStop;
-        riskAssessment.riskScore=riskScore;
-        riskAssessment.level=RiskLevel.from(riskScore);
-        riskAssessment.analyzedAt=LocalDateTime.now();
-        return riskAssessment;
+    public List<RiskFactor> getRiskFactors() {
+        return Collections.unmodifiableList(riskFactors);
     }
-    //RiskFactor과 연결 : RiskAccessment는 RiskFactor를 모른다!
-    public RiskFactor addRiskFactor(
+
+
+    private void addFactor(RiskFactor factor) {
+        riskFactors.add(factor);
+        recalculateRiskLevel();
+    }
+
+    void addFactor(
             RiskFactorType type,
             String description
-    ){
-        RiskFactor riskFactor = RiskFactor.of(
+    ) {
+        this.addFactor(RiskFactor.of(
                 this,
                 type,
                 description
-        );
-        return riskFactor;
-    }
-    //RiskAssessment update
-    private void updateScore(Integer riskScore){
-        this.riskScore=riskScore;
-        this.level=RiskLevel.from(riskScore);
-        this.analyzedAt=LocalDateTime.now();
-    }
-    private void calcRiskScore(){
-        //1. 이 riskAssessment를 가진 모든 RiskFactor 찾아서
-        //2. FactorType에서 점수 꺼내 더한다
-
+        ));
     }
 
-
+    private void recalculateRiskLevel() {
+        int totalScore = riskFactors.stream()
+                .mapToInt(RiskFactor::getRiskScore)
+                .sum();
+        this.level = RiskLevel.from(totalScore);
+    }
 }

@@ -5,6 +5,21 @@ spring:
     password: ${DB_PASSWORD}
   application:
     name: delivery_project
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/delivery_service?serverTimezone=Asia/Seoul&characterEncoding=UTF-8}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD}
+
 weather:
   api:
     key: ${WEATHER_API_KEY}
+
+kakao:
+  local:
+    key: ${KAKAO_LOCAL_API_KEY}
+jwt:
+  issuer: delivery-insight
+  # openssl rand -base64 64 | tr -d '\n'
+  secret-key: ${JWT_SECRET}
+  access-token-validity: 2h
+  refresh-token-validity: 7d

@@ -1,7 +1,6 @@
 package com.example.delivery_project.domain.entity.delivery;
 
-import com.example.delivery_project.domain.entity.enums.RiskFactorType;
-import com.example.delivery_project.domain.entity.enums.RiskLevel;
+import com.example.delivery_project.enums.RiskFactorType;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -28,15 +27,27 @@ public class RiskFactor {
 
     private String description;
 
-    public static RiskFactor of(
+    static RiskFactor of(
+            RiskAssessment riskAssessment,
+            RiskFactorType type
+    ) {
+        RiskFactor riskFactor = new RiskFactor();
+        riskFactor.riskAssessment = riskAssessment;
+        riskFactor.type = type;
+        return riskFactor;
+    }
+
+    static RiskFactor of(
             RiskAssessment riskAssessment,
             RiskFactorType type,
             String description
-    ){
-        RiskFactor riskFactor = new RiskFactor();
-        riskFactor.riskAssessment=riskAssessment;
-        riskFactor.type=type;
-        riskFactor.description=description;
+    ) {
+        RiskFactor riskFactor = of(riskAssessment, type);
+        riskFactor.description = description;
         return riskFactor;
+    }
+
+    public int getRiskScore() {
+        return type.getRiskScore();
     }
 }

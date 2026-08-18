@@ -31,18 +31,22 @@ public class DeliveryPlanService {
     private final DeliveryStopRepository deliveryStopRepository;
     private final WeatherUpdater weatherUpdater;
 
+    private static final String PLAN = "[PLAN]";
+    private static final String STOP = "[STOP]";
+
     public List<DeliveryPlanSummaryResponse> getDeliveryPlans(Long driverId) {
         List<DeliveryPlan> deliveryPlans = deliveryPlanRepository.findAllByDriverId(driverId);
 
+        log.info("{} 목록 조회 완료 driverId: {}, planSize: {} ", PLAN, driverId, deliveryPlans.size());
         return deliveryPlans.stream()
                 .map(DeliveryPlanSummaryResponse::from)
                 .toList();
     }
 
     public DeliveryPlanDetailResponse getDeliveryPlan(Long planId) {
-        // TODO 커스텀 예외로 변경
-        DeliveryPlan plan = deliveryPlanRepository.findDetailById(planId)
-                .orElseThrow(IllegalStateException::new);
+        DeliveryPlan plan = getPlanIfExists(planId);
+
+        log.info("{} 조회 완료 planId: {}", PLAN, planId);
         return DeliveryPlanDetailResponse.from(plan);
     }
 
@@ -50,9 +54,9 @@ public class DeliveryPlanService {
             Long planId,
             Long stopId
     ) {
-        // TODO 커스텀 예외로 변경
         DeliveryStop stop = deliveryStopRepository.findDetailByIdAndPlanId(stopId, planId)
-                .orElseThrow(IllegalStateException::new);
+                .orElseThrow(() -> new BusinessException(DeliveryException.DELIVERY_STOP_NOT_FOUND));
+        log.info("{} 조회 완료 planId: {}, stopId: {}", STOP, planId, stopId);
 
         return DeliveryStopResponse.from(stop);
     }
@@ -62,12 +66,9 @@ public class DeliveryPlanService {
             Long planId,
             UpdateScheduledDepartureRequest request
     ) {
-        // TODO 커스텀 예외로 변경
-        DeliveryPlan plan = deliveryPlanRepository.findById(planId)
-                .orElseThrow(IllegalStateException::new);
-        plan.updateScheduledDepartureAt(
-                request.scheduledDepartureAt()
-        );
+        DeliveryPlan plan = getPlanIfExists(planId);
+        log.info("{} 예정 시간 변경 요청 planId: {}, 변경 요청 시간: {}", PLAN, planId, request.scheduledDepartureAt());
+        plan.updateScheduledDepartureAt(request.scheduledDepartureAt());
     }
 
     @Transactional
@@ -75,9 +76,8 @@ public class DeliveryPlanService {
             Long planId,
             UpdateDeliveryOrderRequest request
     ) {
-        // TODO 커스텀 예외로 변경
-        DeliveryPlan plan = deliveryPlanRepository.findById(planId)
-                .orElseThrow(IllegalStateException::new);
+        DeliveryPlan plan = getPlanIfExists(planId);
+        log.info("{} 순서 편집 요청 planId: {}", PLAN, planId);
         plan.reorderStops(request.stopIds());
     }
 
@@ -85,6 +85,8 @@ public class DeliveryPlanService {
     public void start(
             Long planId
     ) {
+        DeliveryPlan plan = getPlanIfExists(planId);
+        log.info("{} 배송 시작 요청 planId: {}", PLAN, planId);
         // TODO 커스텀 예외로 변경
         DeliveryPlan plan = deliveryPlanRepository.findById(planId)
                 .orElseThrow(IllegalStateException::new);
@@ -134,9 +136,8 @@ public class DeliveryPlanService {
             Long planId,
             Long stopId
     ) {
-        // TODO 커스텀 예외로 변경
-        DeliveryPlan plan = deliveryPlanRepository.findById(planId)
-                .orElseThrow(IllegalStateException::new);
+        DeliveryPlan plan = getPlanIfExists(planId);
+        log.info("{} 포인트 배송 완료처리 요청 planId: {}, stopId: {}", PLAN, planId, stopId);
         plan.completeStop(stopId);
     }
 
@@ -144,9 +145,14 @@ public class DeliveryPlanService {
     public void completePlan(
             Long planId
     ) {
-        // TODO 커스텀 예외로 변경
-        DeliveryPlan plan = deliveryPlanRepository.findById(planId)
-                .orElseThrow(IllegalStateException::new);
+        DeliveryPlan plan = getPlanIfExists(planId);
+        log.info("{} 전체 배송 완료 처리 요청 planId: {}", PLAN, planId);
         plan.finish();
+    }
+
+
+    private DeliveryPlan getPlanIfExists(Long planId) {
+        return deliveryPlanRepository.findById(planId)
+                .orElseThrow(() -> new BusinessException(DeliveryException.DELIVERY_PLAN_NOT_FOUND));
     }
 }
