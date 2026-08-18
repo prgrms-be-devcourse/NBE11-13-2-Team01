@@ -50,7 +50,7 @@ public class RiskAssessment {
         RiskAssessment assessment = new RiskAssessment();
         assessment.deliveryStop = stop;
         assessment.analyzedAt = analyzedAt;
-        assessment.level = RiskLevel.from(0);
+        assessment.level = RiskLevel.UNKNOWN;
         return assessment;
     }
 
@@ -60,6 +60,22 @@ public class RiskAssessment {
 
     public List<RiskFactor> getRiskFactors() {
         return Collections.unmodifiableList(riskFactors);
+    }
+
+    public int getScore() {
+        if (level == RiskLevel.UNKNOWN) {
+            return -1;
+        }
+
+        return riskFactors.stream()
+                .mapToInt(RiskFactor::getRiskScore)
+                .sum();
+    }
+
+    public void markUnknown(LocalDateTime analyzedAt) {
+        riskFactors.clear();
+        this.level = RiskLevel.UNKNOWN;
+        this.analyzedAt = analyzedAt;
     }
 
 
@@ -80,10 +96,31 @@ public class RiskAssessment {
     }
 
     private void recalculateRiskLevel() {
-        int totalScore = riskFactors.stream()
+        this.level = RiskLevel.from(getFactorScore());
+    }
+
+    private int getFactorScore() {
+        return riskFactors.stream()
                 .mapToInt(RiskFactor::getRiskScore)
                 .sum();
-        this.level = RiskLevel.from(totalScore);
+    }
+
+    public void replaceFactors(
+            List<RiskFactorType> types,
+            LocalDateTime analyzedAt
+    ) {
+        riskFactors.clear();
+
+        for (RiskFactorType type : types) {
+            riskFactors.add(RiskFactor.of(
+                    this,
+                    type,
+                    type.getDescription()
+            ));
+        }
+
+        this.analyzedAt = analyzedAt;
+        recalculateRiskLevel();
     }
     public void updateFactors(List<RiskFactorType>  types){
         riskFactors.clear();

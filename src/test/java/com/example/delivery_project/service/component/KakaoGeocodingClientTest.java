@@ -1,5 +1,7 @@
 package com.example.delivery_project.service.component;
 
+import com.example.delivery_project.exception.ExceptionCode;
+import com.example.delivery_project.exception.global.BusinessException;
 import com.example.delivery_project.spec.GeocodedLocation;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -16,6 +18,7 @@ import org.springframework.web.util.UriUtils;
 import java.nio.charset.StandardCharsets;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
@@ -85,6 +88,35 @@ class KakaoGeocodingClientTest {
                 .isEqualTo(35.97664845766847);
         assertThat(result.longitude())
                 .isEqualTo(126.99597295767953);
+    }
+
+    @Test
+    @DisplayName("빈 주소는 카카오 API를 호출하지 않고 거부한다")
+    void geocode_rejects_blank_address() {
+        assertThatThrownBy(() -> geocodingClient.geocode(" "))
+                .isInstanceOfSatisfying(
+                        BusinessException.class,
+                        exception -> assertThat(exception.getErrorCode())
+                                .isEqualTo(ExceptionCode.INVALID_INPUT)
+                );
+    }
+
+    @Test
+    @DisplayName("검색 결과가 없는 주소는 입력 오류로 처리한다")
+    void geocode_rejects_address_without_result() {
+        server.expect(request -> assertThat(request.getURI().getHost())
+                        .isEqualTo("dapi.kakao.com"))
+                .andRespond(withSuccess(
+                        "{\"documents\":[]}",
+                        MediaType.APPLICATION_JSON
+                ));
+
+        assertThatThrownBy(() -> geocodingClient.geocode("없는 주소"))
+                .isInstanceOfSatisfying(
+                        BusinessException.class,
+                        exception -> assertThat(exception.getErrorCode())
+                                .isEqualTo(ExceptionCode.INVALID_INPUT)
+                );
     }
 
     private static final String KAKAO_ADDRESS_RESPONSE = """

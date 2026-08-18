@@ -7,7 +7,6 @@ import com.example.delivery_project.dto.response.WeatherResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -32,9 +31,13 @@ public class WeatherUpdater {
     // 초단기예보 발표시각(매시 30분) 기준, 현재 시각에서 조회 가능한 가장 최근 발표시각을 계산
     public BaseDateTime resolveLatestBaseDateTime() {
         LocalDateTime now = LocalDateTime.now(SEOUL);
-        LocalDateTime baseDateTime = now.withMinute(30).withSecond(0).withNano(0);
+        LocalDateTime availableReference = now.minusMinutes(15);
+        LocalDateTime baseDateTime = availableReference
+                .withMinute(30)
+                .withSecond(0)
+                .withNano(0);
 
-        if (baseDateTime.isAfter(now)) {
+        if (baseDateTime.isAfter(availableReference)) {
             baseDateTime = baseDateTime.minusHours(1);
         }
         return new BaseDateTime(
@@ -44,20 +47,21 @@ public class WeatherUpdater {
     }
 
     //날씨 공공 데이터를 받아온다.
-    public void update(WeatherRequest request) {
+    public boolean update(WeatherRequest request) {
         //날씨 데이터 받아오기
         WeatherResponse response = weatherProvider.getWeather(request);
 
         if (!"00".equals(response.header().resultCode())) {
             log.info("weather api result: code={}, msg={}", response.header().resultCode(), response.header().resultMsg());
             //날씨 데이터를 받지 못했을 경우 처리
-            return;
+            return false;
         }
 
         LocalDateTime fetchedAt = LocalDateTime.now();
         for (WeatherResponse.Item item : response.body().items().item()) {
             upsert(item, fetchedAt);
         }
+        return true;
     }
 
     //해당 데이터가 있으면 Update, 없으면 Insert

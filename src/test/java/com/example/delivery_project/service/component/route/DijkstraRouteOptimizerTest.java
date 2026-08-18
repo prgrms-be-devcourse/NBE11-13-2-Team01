@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class DijkstraRouteOptimizerTest {
 
@@ -101,6 +102,48 @@ class DijkstraRouteOptimizerTest {
 
         assertThat(result.stopIds()).isEmpty();
         assertThat(result.totalDurationSeconds()).isZero();
+    }
+
+    @Test
+    @DisplayName("모든 후보를 방문할 경로가 없으면 실패한다")
+    void optimize_fails_when_route_is_disconnected() {
+        RouteOptimizationContext context = context(
+                0L,
+                List.of(1L, 2L),
+                Map.ofEntries(duration(0L, 1L, 1L))
+        );
+
+        assertThatThrownBy(() -> routeOptimizer.optimize(context))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("방문할 수 있는 경로가 없습니다");
+    }
+
+    @Test
+    @DisplayName("후보 배송지 ID는 중복될 수 없다")
+    void context_rejects_duplicate_candidates() {
+        assertThatThrownBy(() -> context(
+                0L,
+                List.of(1L, 1L),
+                Map.of()
+        )).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("현재 배송지는 후보 목록에 포함될 수 없다")
+    void context_rejects_current_stop_as_candidate() {
+        assertThatThrownBy(() -> context(
+                1L,
+                List.of(1L, 2L),
+                Map.of()
+        )).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("이동시간은 음수일 수 없다")
+    void matrix_rejects_negative_duration() {
+        assertThatThrownBy(() -> new TravelCostMatrix(
+                Map.of(new RouteLeg(1L, 2L), -1L)
+        )).isInstanceOf(IllegalArgumentException.class);
     }
 
     private void printResult(
