@@ -110,4 +110,11 @@ public class TokenService {
         }
         return null;
     }
+
+    // 로그아웃 시 DB에 저장된 refresh token(row 전체) 삭제
+    @Transactional
+    public void logout(Long userId) {
+        refreshTokenRepository.deleteByUserId(userId);
+        log.info("[AUTH] 로그아웃 처리 완료 userId: {}", userId);
+    }
 }

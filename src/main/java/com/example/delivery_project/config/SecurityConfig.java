@@ -47,7 +47,7 @@ public class SecurityConfig {
                                 "/api/users/join",
                                 "/api/users/login",
                                 "/api/tokens/refresh",
-                                // TODO api 추가
+                                // TODO 허용할 API 추가
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
                                 "/error"
