@@ -1,12 +1,10 @@
 package com.example.delivery_project.controller;
 
-import com.example.delivery_project.config.OpenApiConfig;
 import com.example.delivery_project.dto.response.DriverSummaryResponse;
 import com.example.delivery_project.service.DriverQueryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -21,7 +19,6 @@ import java.util.List;
 @RequestMapping("/api/admin/drivers")
 @PreAuthorize("hasRole('ADMIN')")
 @Tag(name = "관리자 배송 기사", description = "배송 계획 할당을 위한 배송 기사 조회 API")
-@SecurityRequirement(name = OpenApiConfig.BEARER_AUTH)
 public class AdminDriverController {
 
     private final DriverQueryService driverQueryService;

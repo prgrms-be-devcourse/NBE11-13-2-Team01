@@ -1,6 +1,5 @@
 package com.example.delivery_project.controller;
 
-import com.example.delivery_project.config.OpenApiConfig;
 import com.example.delivery_project.dto.request.UpdateDeliveryOrderRequest;
 import com.example.delivery_project.dto.response.DeliveryPlanDetailResponse;
 import com.example.delivery_project.dto.response.DeliveryPlanSummaryResponse;
@@ -13,7 +12,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -35,7 +33,6 @@ import java.util.List;
 @RequestMapping("/api/delivery-plans")
 @PreAuthorize("hasRole('DELIVERY_DRIVER')")
 @Tag(name = "배송 계획", description = "배송 기사의 배송 계획 조회 및 진행 관리 API")
-@SecurityRequirement(name = OpenApiConfig.BEARER_AUTH)
 public class DeliveryPlanController {
 
     private final DeliveryPlanService deliveryPlanService;
