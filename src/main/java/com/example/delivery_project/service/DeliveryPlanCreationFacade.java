@@ -8,6 +8,7 @@ import com.example.delivery_project.domain.repository.UserRepository;
 import com.example.delivery_project.dto.request.CreateDeliveryItemRequest;
 import com.example.delivery_project.dto.request.CreateDeliveryPlanRequest;
 import com.example.delivery_project.dto.request.CreateDeliveryStopRequest;
+import com.example.delivery_project.enums.Role;
 import com.example.delivery_project.event.DeliveryPlanCreatedEvent;
 import com.example.delivery_project.exception.ExceptionCode;
 import com.example.delivery_project.exception.global.BusinessException;
@@ -107,10 +108,19 @@ public class DeliveryPlanCreationFacade {
     }
 
     private User getDriver(Long driverId) {
-        return userRepository.findById(driverId)
+        User driver = userRepository.findById(driverId)
                 .orElseThrow(() -> new BusinessException(
                         ExceptionCode.INVALID_INPUT,
                         "존재하지 않는 driverId입니다: " + driverId
                 ));
+
+        if (driver.getRole() != Role.ROLE_DELIVERY_DRIVER) {
+            throw new BusinessException(
+                    ExceptionCode.INVALID_INPUT,
+                    "배송 기사에게만 계획을 할당할 수 있습니다: " + driverId
+            );
+        }
+
+        return driver;
     }
 }

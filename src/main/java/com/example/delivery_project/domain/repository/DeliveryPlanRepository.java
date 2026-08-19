@@ -21,6 +21,8 @@ public interface DeliveryPlanRepository extends JpaRepository<DeliveryPlan,Long>
 
     List<DeliveryPlan> findAllByDriverId(Long driverId);
 
+    List<DeliveryPlan> findAllByOrderByScheduledDepartureAtAsc();
+
     Optional<DeliveryPlan> findByIdAndDriverId(
             Long planId,
             Long driverId
