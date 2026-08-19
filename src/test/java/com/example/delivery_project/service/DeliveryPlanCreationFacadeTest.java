@@ -157,4 +157,33 @@ class DeliveryPlanCreationFacadeTest {
         verify(deliveryPlanRepository, never()).save(any());
         verify(eventPublisher, never()).publishEvent(any());
     }
+
+    @Test
+    void 관리자에게는_배송계획을_할당할_수_없다() {
+        User admin = User.of(
+                1L,
+                "admin",
+                "password",
+                "관리자",
+                Role.ROLE_ADMIN
+        );
+        when(userRepository.findById(1L)).thenReturn(Optional.of(admin));
+
+        CreateDeliveryPlanRequest request = new CreateDeliveryPlanRequest(
+                "서울 물류센터",
+                LocalDateTime.now().plusHours(1),
+                List.of()
+        );
+
+        assertThatThrownBy(() -> facade.create(1L, request))
+                .isInstanceOfSatisfying(
+                        BusinessException.class,
+                        exception -> assertThat(exception.getErrorCode())
+                                .isEqualTo(ExceptionCode.INVALID_INPUT)
+                );
+
+        verify(geocodingClient, never()).geocode(any());
+        verify(deliveryPlanRepository, never()).save(any());
+        verify(eventPublisher, never()).publishEvent(any());
+    }
 }
