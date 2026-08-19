@@ -21,6 +21,8 @@ public record DeliveryStopResponse(
         Double longitude,
         @Schema(description = "배송 완료 시각", example = "2026-01-01T00:00:00")
         LocalDateTime completedAt,
+        @Schema(description = "배송 위험도")
+        RiskAssessmentResponse riskAssessment,
         @Schema(description = "배송 상품 목록")
         List<DeliveryItemResponse> deliveryItems
 ) {
@@ -35,6 +37,7 @@ public record DeliveryStopResponse(
                 stop.getLatitude(),
                 stop.getLongitude(),
                 stop.getCompletedAt(),
+                RiskAssessmentResponse.from(stop.getRiskAssessment()),
                 deliveryItems
         );
     }
