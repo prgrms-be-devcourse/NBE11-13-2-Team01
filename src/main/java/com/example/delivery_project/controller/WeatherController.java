@@ -31,9 +31,4 @@ public class WeatherController {
         weatherService.save(request);
     }
 
-    @PostMapping("/update/{id}")
-    public void test3(@PathVariable Long id){
-        riskAssessmentService.updateRiskAssessment(id);
-    }
-
 }
