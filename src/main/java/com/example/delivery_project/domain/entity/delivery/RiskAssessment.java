@@ -122,4 +122,8 @@ public class RiskAssessment {
         this.analyzedAt = analyzedAt;
         recalculateRiskLevel();
     }
+    public void updateFactors(List<RiskFactorType>  types){
+        riskFactors.clear();
+        types.forEach(type-> addFactor(type,type.getDescription()));
+    }
 }

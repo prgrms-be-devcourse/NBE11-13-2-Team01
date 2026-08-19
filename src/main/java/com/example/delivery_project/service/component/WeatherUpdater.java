@@ -5,6 +5,7 @@ import com.example.delivery_project.domain.repository.WeatherRepository;
 import com.example.delivery_project.dto.request.WeatherRequest;
 import com.example.delivery_project.dto.response.WeatherResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
@@ -13,6 +14,7 @@ import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class WeatherUpdater {
@@ -50,6 +52,7 @@ public class WeatherUpdater {
         WeatherResponse response = weatherProvider.getWeather(request);
 
         if (!"00".equals(response.header().resultCode())) {
+            log.info("weather api result: code={}, msg={}", response.header().resultCode(), response.header().resultMsg());
             //날씨 데이터를 받지 못했을 경우 처리
             return false;
         }

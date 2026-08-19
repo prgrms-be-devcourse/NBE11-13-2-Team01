@@ -168,3 +168,50 @@ CREATE TABLE weather (
                          fetched_at  DATETIME(6)  NOT NULL,
                          CONSTRAINT uk_weather_slot UNIQUE (nx, ny, fcst_date, fcst_time, category)
 ) ENGINE=InnoDB;
+
+select * from risk_factor;
+select * from risk_assessment;
+select * from delivery_stop;
+select * from delivery_plan;
+select * from weather;
+
+-- ------------------------------------------------------------
+-- 더미 데이터 (기능 테스트용)
+-- ------------------------------------------------------------
+
+-- delivery_plan.driver_id FK를 만족시키기 위한 최소 기사 계정 1명
+INSERT INTO users (login_id, password, name, role) VALUES
+    ('driver1', '1234', '김기사', 'ROLE_DELIVERY_DRIVER');
+
+-- delivery_plan 2건
+INSERT INTO delivery_plan
+    (id, driver_id, departure_location, departure_latitude, departure_longitude, status, created_at) VALUES
+    (1, 1, '서울 강남구 테헤란로 152', 37.5006, 127.0364, 'READY', NOW()),
+    (2, 1, '서울 마포구 월드컵북로 396', 37.5665, 126.8977, 'READY', NOW());
+
+-- delivery_stop 5건 (plan1: 3개, plan2: 2개)
+INSERT INTO delivery_stop
+    (id, delivery_plan_id, sequence, status, address, latitude, longitude) VALUES
+    (1, 1, 0, 'READY', '서울 강남구 역삼동 123', 37.5006, 127.0365),
+    (2, 1, 1, 'READY', '서울 강남구 삼성동 456', 37.5140, 127.0560),
+    (3, 1, 2, 'READY', '서울 서초구 서초동 789', 37.4919, 127.0148),
+    (4, 2, 0, 'READY', '서울 마포구 상암동 111', 37.5794, 126.8896),
+    (5, 2, 1, 'READY', '서울 은평구 불광동 222', 37.6104, 126.9295);
+
+-- risk_assessment 5건 (delivery_stop 1:1) - SAFE/CAUTION/DANGER 골고루 섞음
+INSERT INTO risk_assessment (id, delivery_stop_id, level, analyzed_at) VALUES
+    (1, 1, 'SAFE', NOW()),
+    (2, 2, 'CAUTION', NOW()),
+    (3, 3, 'DANGER', NOW()),
+    (4, 4, 'SAFE', NOW()),
+    (5, 5, 'CAUTION', NOW());
+
+-- risk_factor : CAUTION(40~69점)/DANGER(70점 이상) assessment에만 부여
+-- HEAVY_RAIN=30, HEAT_WAVE=20, WEATHER_WARNING=40
+INSERT INTO risk_factor (risk_assessment_id, type, description) VALUES
+    (2, 'HEAT_WAVE', '폭염'),
+    (2, 'HEAVY_RAIN', '폭우'),
+    (3, 'WEATHER_WARNING', '기상 특보'),
+    (3, 'HEAVY_RAIN', '폭우'),
+    (5, 'HEAT_WAVE', '폭염'),
+    (5, 'HEAVY_RAIN', '폭우');
