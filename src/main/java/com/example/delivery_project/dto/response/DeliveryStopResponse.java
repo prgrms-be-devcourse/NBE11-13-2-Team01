@@ -13,6 +13,7 @@ public record DeliveryStopResponse(
         Double latitude,
         Double longitude,
         LocalDateTime completedAt,
+        RiskAssessmentResponse riskAssessment,
         List<DeliveryItemResponse> deliveryItems
 ) {
     public static DeliveryStopResponse from(DeliveryStop stop) {
@@ -26,6 +27,7 @@ public record DeliveryStopResponse(
                 stop.getLatitude(),
                 stop.getLongitude(),
                 stop.getCompletedAt(),
+                RiskAssessmentResponse.from(stop.getRiskAssessment()),
                 deliveryItems
         );
     }

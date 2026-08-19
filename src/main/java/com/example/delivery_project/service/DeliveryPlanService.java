@@ -38,8 +38,11 @@ public class DeliveryPlanService {
                 .toList();
     }
 
-    public DeliveryPlanDetailResponse getDeliveryPlan(Long planId) {
-        DeliveryPlan plan = getPlanIfExists(planId);
+    public DeliveryPlanDetailResponse getDeliveryPlan(
+            Long planId,
+            Long driverId
+    ) {
+        DeliveryPlan plan = getOwnedPlan(planId, driverId);
 
         log.info("{} 조회 완료 planId: {}", PLAN, planId);
         return DeliveryPlanDetailResponse.from(plan);
@@ -47,8 +50,11 @@ public class DeliveryPlanService {
 
     public DeliveryStopResponse getDeliveryStop(
             Long planId,
-            Long stopId
+            Long stopId,
+            Long driverId
     ) {
+        getOwnedPlan(planId, driverId);
+
         DeliveryStop stop = deliveryStopRepository.findDetailByIdAndPlanId(stopId, planId)
                 .orElseThrow(() -> new BusinessException(DeliveryException.DELIVERY_STOP_NOT_FOUND));
         log.info("{} 조회 완료 planId: {}, stopId: {}", STOP, planId, stopId);
@@ -59,9 +65,10 @@ public class DeliveryPlanService {
     @Transactional
     public void changeScheduledDepartureAt(
             Long planId,
+            Long driverId,
             UpdateScheduledDepartureRequest request
     ) {
-        DeliveryPlan plan = getPlanIfExists(planId);
+        DeliveryPlan plan = getOwnedPlan(planId, driverId);
         log.info("{} 예정 시간 변경 요청 planId: {}, 변경 요청 시간: {}", PLAN, planId, request.scheduledDepartureAt());
         plan.updateScheduledDepartureAt(request.scheduledDepartureAt());
     }
@@ -69,18 +76,20 @@ public class DeliveryPlanService {
     @Transactional
     public void reorderStops(
             Long planId,
+            Long driverId,
             UpdateDeliveryOrderRequest request
     ) {
-        DeliveryPlan plan = getPlanIfExists(planId);
+        DeliveryPlan plan = getOwnedPlan(planId, driverId);
         log.info("{} 순서 편집 요청 planId: {}", PLAN, planId);
         plan.reorderStops(request.stopIds());
     }
 
     @Transactional
     public void start(
-            Long planId
+            Long planId,
+            Long driverId
     ) {
-        DeliveryPlan plan = getPlanIfExists(planId);
+        DeliveryPlan plan = getOwnedPlan(planId, driverId);
         log.info("{} 배송 시작 요청 planId: {}", PLAN, planId);
         plan.start();
     }
@@ -88,25 +97,33 @@ public class DeliveryPlanService {
     @Transactional
     public void completeStop(
             Long planId,
-            Long stopId
+            Long stopId,
+            Long driverId
     ) {
-        DeliveryPlan plan = getPlanIfExists(planId);
+        DeliveryPlan plan = getOwnedPlan(planId, driverId);
         log.info("{} 포인트 배송 완료처리 요청 planId: {}, stopId: {}", PLAN, planId, stopId);
         plan.completeStop(stopId);
     }
 
     @Transactional
     public void completePlan(
-            Long planId
+            Long planId,
+            Long driverId
     ) {
-        DeliveryPlan plan = getPlanIfExists(planId);
+        DeliveryPlan plan = getOwnedPlan(planId, driverId);
         log.info("{} 전체 배송 완료 처리 요청 planId: {}", PLAN, planId);
         plan.finish();
     }
 
 
-    private DeliveryPlan getPlanIfExists(Long planId) {
-        return deliveryPlanRepository.findById(planId)
+    private DeliveryPlan getOwnedPlan(
+            Long planId,
+            Long driverId
+    ) {
+        return deliveryPlanRepository.findByIdAndDriverId(
+                        planId,
+                        driverId
+                )
                 .orElseThrow(() -> new BusinessException(DeliveryException.DELIVERY_PLAN_NOT_FOUND));
     }
 }
