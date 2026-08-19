@@ -79,6 +79,15 @@ class DeliveryRepositoryIntegrationTest {
         DeliveryPlan savedPlan =
                 deliveryPlanRepository.saveAndFlush(plan);
 
+        assertThat(deliveryPlanRepository.findByIdAndDriverId(
+                savedPlan.getId(),
+                driver.getId()
+        )).isPresent();
+        assertThat(deliveryPlanRepository.findByIdAndDriverId(
+                savedPlan.getId(),
+                Long.MAX_VALUE
+        )).isEmpty();
+
         List<DeliveryStop> readyStops =
                 deliveryStopRepository.findAllByStatusIn(
                         List.of(DeliveryStopStatus.READY)

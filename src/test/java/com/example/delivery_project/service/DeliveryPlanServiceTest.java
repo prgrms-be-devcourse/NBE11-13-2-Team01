@@ -13,6 +13,7 @@ import com.example.delivery_project.dto.response.DeliveryPlanSummaryResponse;
 import com.example.delivery_project.dto.response.DeliveryStopResponse;
 import com.example.delivery_project.enums.DeliveryPlanStatus;
 import com.example.delivery_project.enums.ProductType;
+import com.example.delivery_project.enums.RiskLevel;
 import com.example.delivery_project.enums.Role;
 import com.example.delivery_project.exception.DeliveryException;
 import com.example.delivery_project.exception.global.BusinessException;
@@ -98,40 +99,46 @@ class DeliveryPlanServiceTest {
 
     @Test
     void 배송계획과_배송지_상세를_응답으로_변환한다() {
-        when(deliveryPlanRepository.findById(10L))
+        when(deliveryPlanRepository.findByIdAndDriverId(10L, 1L))
                 .thenReturn(Optional.of(plan));
         when(deliveryStopRepository.findDetailByIdAndPlanId(101L, 10L))
                 .thenReturn(Optional.of(firstStop));
 
         DeliveryPlanDetailResponse planResponse =
-                deliveryPlanService.getDeliveryPlan(10L);
+                deliveryPlanService.getDeliveryPlan(10L, 1L);
         DeliveryStopResponse stopResponse =
-                deliveryPlanService.getDeliveryStop(10L, 101L);
+                deliveryPlanService.getDeliveryStop(10L, 101L, 1L);
 
         assertThat(planResponse.planId()).isEqualTo(10L);
         assertThat(planResponse.deliveryStops()).hasSize(2);
         assertThat(stopResponse.stopId()).isEqualTo(101L);
         assertThat(stopResponse.deliveryItems()).hasSize(1);
+        assertThat(stopResponse.riskAssessment().score()).isEqualTo(-1);
+        assertThat(stopResponse.riskAssessment().level())
+                .isEqualTo(RiskLevel.UNKNOWN);
+        assertThat(stopResponse.riskAssessment().factors()).isEmpty();
     }
 
     @Test
     void 배송_상태_변경_흐름을_서비스에서_수행한다() {
-        when(deliveryPlanRepository.findById(10L))
+        when(deliveryPlanRepository.findByIdAndDriverId(10L, 1L))
                 .thenReturn(Optional.of(plan));
         LocalDateTime changedDepartureAt = LocalDateTime.now().plusHours(2);
 
         deliveryPlanService.changeScheduledDepartureAt(
                 10L,
+                1L,
                 new UpdateScheduledDepartureRequest(changedDepartureAt)
         );
         deliveryPlanService.reorderStops(
                 10L,
+                1L,
                 new UpdateDeliveryOrderRequest(List.of(102L, 101L))
         );
-        deliveryPlanService.start(10L);
-        deliveryPlanService.completeStop(10L, 101L);
-        deliveryPlanService.completeStop(10L, 102L);
-        deliveryPlanService.completePlan(10L);
+        deliveryPlanService.start(10L, 1L);
+        deliveryPlanService.completeStop(10L, 101L, 1L);
+        deliveryPlanService.completeStop(10L, 102L, 1L);
+        deliveryPlanService.completePlan(10L, 1L);
 
         assertThat(plan.getScheduledDepartureAt())
                 .isEqualTo(changedDepartureAt);
@@ -144,10 +151,10 @@ class DeliveryPlanServiceTest {
 
     @Test
     void 존재하지_않는_계획을_조회하면_예외가_발생한다() {
-        when(deliveryPlanRepository.findById(999L))
+        when(deliveryPlanRepository.findByIdAndDriverId(999L, 1L))
                 .thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> deliveryPlanService.getDeliveryPlan(999L))
+        assertThatThrownBy(() -> deliveryPlanService.getDeliveryPlan(999L, 1L))
                 .isInstanceOfSatisfying(
                         BusinessException.class,
                         exception -> assertThat(exception.getErrorCode())
@@ -157,15 +164,31 @@ class DeliveryPlanServiceTest {
 
     @Test
     void 계획에_속한_배송지가_없으면_예외가_발생한다() {
+        when(deliveryPlanRepository.findByIdAndDriverId(10L, 1L))
+                .thenReturn(Optional.of(plan));
         when(deliveryStopRepository.findDetailByIdAndPlanId(999L, 10L))
                 .thenReturn(Optional.empty());
 
         assertThatThrownBy(
-                () -> deliveryPlanService.getDeliveryStop(10L, 999L)
+                () -> deliveryPlanService.getDeliveryStop(10L, 999L, 1L)
         ).isInstanceOfSatisfying(
                 BusinessException.class,
                 exception -> assertThat(exception.getErrorCode())
-                        .isEqualTo(DeliveryException.DELIVERY_STOP_NOT_FOUND)
+                                .isEqualTo(DeliveryException.DELIVERY_STOP_NOT_FOUND)
+        );
+    }
+
+    @Test
+    void 다른_기사의_배송계획에는_접근할_수_없다() {
+        when(deliveryPlanRepository.findByIdAndDriverId(10L, 2L))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(
+                () -> deliveryPlanService.getDeliveryPlan(10L, 2L)
+        ).isInstanceOfSatisfying(
+                BusinessException.class,
+                exception -> assertThat(exception.getErrorCode())
+                        .isEqualTo(DeliveryException.DELIVERY_PLAN_NOT_FOUND)
         );
     }
 }
