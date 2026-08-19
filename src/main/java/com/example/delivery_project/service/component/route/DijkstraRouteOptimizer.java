@@ -65,7 +65,7 @@ public class DijkstraRouteOptimizer implements RouteOptimizer {
             );
         }
 
-        // TODO 커스텀 예외로 변경
+        // aTODO 커스텀 예외로 변경
         throw new IllegalStateException(
                 "모든 후보 배송지를 방문할 수 있는 경로가 없습니다."
         );

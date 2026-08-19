@@ -20,4 +20,9 @@ public interface DeliveryPlanRepository extends JpaRepository<DeliveryPlan,Long>
     Optional<DeliveryPlan> findDetailById(Long id);
 
     List<DeliveryPlan> findAllByDriverId(Long driverId);
+
+    Optional<DeliveryPlan> findByIdAndDriverId(
+            Long planId,
+            Long driverId
+    );
 }
