@@ -1,8 +1,8 @@
 package com.example.delivery_project.service;
 
-import com.example.delivery_project.domain.entity.token.RefreshToken;
 import com.example.delivery_project.domain.entity.user.User;
-import com.example.delivery_project.domain.repository.RefreshTokenRepository;
+import com.example.delivery_project.domain.repository.RefreshTokenRedisRepository;
+import com.example.delivery_project.domain.repository.UserRepository;
 import com.example.delivery_project.enums.Role;
 import com.example.delivery_project.exception.AuthException;
 import com.example.delivery_project.exception.global.BusinessException;
@@ -14,7 +14,6 @@ import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -24,10 +23,8 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.mockito.ArgumentMatchers.any;
 
 @ExtendWith(MockitoExtension.class)
 class TokenServiceTest {
@@ -42,7 +39,10 @@ class TokenServiceTest {
     private JwtProperties jwtProperties;
 
     @Mock
-    private RefreshTokenRepository refreshTokenRepository;
+    private RefreshTokenRedisRepository refreshTokenRedisRepository;
+
+    @Mock
+    private UserRepository userRepository;
 
     @InjectMocks
     private TokenService tokenService;
@@ -61,69 +61,78 @@ class TokenServiceTest {
     }
 
     @Test
-    void 토큰을_발급하고_신규_RefreshToken을_저장한다() {
+    void 토큰을_발급하고_RefreshToken을_Redis에_저장한다() {
         givenTokenProperties();
+
         when(tokenProvider.generateToken(user, ACCESS_VALIDITY))
                 .thenReturn("access-token");
         when(tokenProvider.generateToken(user, REFRESH_VALIDITY))
                 .thenReturn("refresh-token");
-        when(refreshTokenRepository.findByUserId(1L))
-                .thenReturn(Optional.empty());
 
-        TokenService.TokenPair pair = tokenService.issueToken(user);
+        TokenService.TokenPair pair =
+                tokenService.issueToken(user);
 
-        ArgumentCaptor<RefreshToken> captor =
-                ArgumentCaptor.forClass(RefreshToken.class);
-        verify(refreshTokenRepository).save(captor.capture());
+        assertThat(pair.accessToken())
+                .isEqualTo("access-token");
+        assertThat(pair.refreshToken())
+                .isEqualTo("refresh-token");
 
-        assertThat(pair.accessToken()).isEqualTo("access-token");
-        assertThat(pair.refreshToken()).isEqualTo("refresh-token");
-        assertThat(captor.getValue().getUser()).isEqualTo(user);
-        assertThat(captor.getValue().getToken()).isEqualTo("refresh-token");
-    }
-
-    @Test
-    void 기존_RefreshToken이_있으면_새_토큰으로_교체한다() {
-        givenTokenProperties();
-        RefreshToken stored = RefreshToken.of(user, "old-token");
-        when(tokenProvider.generateToken(user, ACCESS_VALIDITY))
-                .thenReturn("new-access-token");
-        when(tokenProvider.generateToken(user, REFRESH_VALIDITY))
-                .thenReturn("new-refresh-token");
-        when(refreshTokenRepository.findByUserId(1L))
-                .thenReturn(Optional.of(stored));
-
-        tokenService.issueToken(user);
-
-        assertThat(stored.getToken()).isEqualTo("new-refresh-token");
-        verify(refreshTokenRepository, never()).save(any());
+        verify(refreshTokenRedisRepository)
+                .save(
+                        1L,
+                        "refresh-token",
+                        REFRESH_VALIDITY
+                );
     }
 
     @Test
     void 유효한_RefreshToken으로_rotation을_수행한다() {
         givenTokenProperties();
-        RefreshToken stored = RefreshToken.of(user, "old-refresh-token");
+
         Cookie cookie = new Cookie(
                 CookieUtil.REFRESH_TOKEN_COOKIE,
                 "old-refresh-token"
         );
+
+        // Refresh Token 자체 검증
         when(tokenProvider.validateToken("old-refresh-token"))
                 .thenReturn(TokenStatus.VALID);
-        when(refreshTokenRepository.findByToken("old-refresh-token"))
-                .thenReturn(Optional.of(stored));
+
+        // JWT에서 userId 추출
+        when(tokenProvider.getTokenDetails("old-refresh-token"))
+                .thenReturn(user);
+
+        // Redis에 현재 사용 가능한 Refresh Token 존재
+        when(refreshTokenRedisRepository.findByUserId(1L))
+                .thenReturn(Optional.of("old-refresh-token"));
+
+        // 실제 DB의 최신 User 조회
+        when(userRepository.findById(1L))
+                .thenReturn(Optional.of(user));
+
+        // 새 토큰 발급
         when(tokenProvider.generateToken(user, ACCESS_VALIDITY))
                 .thenReturn("new-access-token");
         when(tokenProvider.generateToken(user, REFRESH_VALIDITY))
                 .thenReturn("new-refresh-token");
-        when(refreshTokenRepository.findByUserId(1L))
-                .thenReturn(Optional.of(stored));
 
         TokenService.TokenPair pair =
-                tokenService.refreshToken(new Cookie[]{cookie});
+                tokenService.refreshToken(
+                        new Cookie[]{cookie}
+                );
 
-        assertThat(pair.accessToken()).isEqualTo("new-access-token");
-        assertThat(pair.refreshToken()).isEqualTo("new-refresh-token");
-        assertThat(stored.getToken()).isEqualTo("new-refresh-token");
+        assertThat(pair.accessToken())
+                .isEqualTo("new-access-token");
+        assertThat(pair.refreshToken())
+                .isEqualTo("new-refresh-token");
+
+        // 기존 key에 R2 저장 -> R1에서 R2로 rotation
+        verify(refreshTokenRedisRepository)
+                .save(
+                        1L,
+                        "new-refresh-token",
+                        REFRESH_VALIDITY
+                );
     }
 
     @Test
@@ -135,63 +144,129 @@ class TokenServiceTest {
     }
 
     @Test
-    void 만료되거나_위조된_RefreshToken을_거부한다() {
-        Cookie expiredCookie = new Cookie(
+    void 만료된_RefreshToken을_거부한다() {
+        Cookie cookie = new Cookie(
                 CookieUtil.REFRESH_TOKEN_COOKIE,
                 "expired-token"
         );
+
         when(tokenProvider.validateToken("expired-token"))
                 .thenReturn(TokenStatus.EXPIRED);
 
         assertAuthException(
                 () -> tokenService.refreshToken(
-                        new Cookie[]{expiredCookie}
+                        new Cookie[]{cookie}
                 ),
                 AuthException.EXPIRED_REFRESH_TOKEN
         );
+    }
 
-        Cookie invalidCookie = new Cookie(
+    @Test
+    void 위조된_RefreshToken을_거부한다() {
+        Cookie cookie = new Cookie(
                 CookieUtil.REFRESH_TOKEN_COOKIE,
                 "invalid-token"
         );
+
         when(tokenProvider.validateToken("invalid-token"))
                 .thenReturn(TokenStatus.INVALID);
 
         assertAuthException(
                 () -> tokenService.refreshToken(
-                        new Cookie[]{invalidCookie}
+                        new Cookie[]{cookie}
                 ),
                 AuthException.INVALID_REFRESH_TOKEN
         );
     }
 
     @Test
-    void DB에_없는_RefreshToken을_거부한다() {
+    void Redis에_RefreshToken이_없으면_재발급을_거부한다() {
         Cookie cookie = new Cookie(
                 CookieUtil.REFRESH_TOKEN_COOKIE,
-                "unknown-token"
+                "refresh-token"
         );
-        when(tokenProvider.validateToken("unknown-token"))
+
+        when(tokenProvider.validateToken("refresh-token"))
                 .thenReturn(TokenStatus.VALID);
-        when(refreshTokenRepository.findByToken("unknown-token"))
+
+        when(tokenProvider.getTokenDetails("refresh-token"))
+                .thenReturn(user);
+
+        when(refreshTokenRedisRepository.findByUserId(1L))
                 .thenReturn(Optional.empty());
 
         assertAuthException(
-                () -> tokenService.refreshToken(new Cookie[]{cookie}),
+                () -> tokenService.refreshToken(
+                        new Cookie[]{cookie}
+                ),
                 AuthException.INVALID_REFRESH_TOKEN
         );
     }
 
     @Test
-    void 로그아웃하면_사용자의_RefreshToken을_삭제한다() {
+    void Redis에_저장된_RefreshToken과_다르면_재발급을_거부한다() {
+        Cookie cookie = new Cookie(
+                CookieUtil.REFRESH_TOKEN_COOKIE,
+                "old-refresh-token"
+        );
+
+        when(tokenProvider.validateToken("old-refresh-token"))
+                .thenReturn(TokenStatus.VALID);
+
+        when(tokenProvider.getTokenDetails("old-refresh-token"))
+                .thenReturn(user);
+
+        // Redis에는 이미 rotation 된 R2가 들어있는 상황
+        when(refreshTokenRedisRepository.findByUserId(1L))
+                .thenReturn(Optional.of("new-refresh-token"));
+
+        assertAuthException(
+                () -> tokenService.refreshToken(
+                        new Cookie[]{cookie}
+                ),
+                AuthException.INVALID_REFRESH_TOKEN
+        );
+    }
+
+    @Test
+    void RefreshToken의_User가_DB에_없으면_재발급을_거부한다() {
+        Cookie cookie = new Cookie(
+                CookieUtil.REFRESH_TOKEN_COOKIE,
+                "refresh-token"
+        );
+
+        when(tokenProvider.validateToken("refresh-token"))
+                .thenReturn(TokenStatus.VALID);
+
+        when(tokenProvider.getTokenDetails("refresh-token"))
+                .thenReturn(user);
+
+        when(refreshTokenRedisRepository.findByUserId(1L))
+                .thenReturn(Optional.of("refresh-token"));
+
+        when(userRepository.findById(1L))
+                .thenReturn(Optional.empty());
+
+        assertAuthException(
+                () -> tokenService.refreshToken(
+                        new Cookie[]{cookie}
+                ),
+                AuthException.INVALID_REFRESH_TOKEN
+        );
+    }
+
+    @Test
+    void 로그아웃하면_Redis의_RefreshToken을_삭제한다() {
         tokenService.logout(1L);
 
-        verify(refreshTokenRepository).deleteByUserId(1L);
+        verify(refreshTokenRedisRepository)
+                .deleteByUserId(1L);
     }
 
     private void givenTokenProperties() {
         when(jwtProperties.getAccessTokenValidity())
                 .thenReturn(ACCESS_VALIDITY);
+
         when(jwtProperties.getRefreshTokenValidity())
                 .thenReturn(REFRESH_VALIDITY);
     }
@@ -203,8 +278,9 @@ class TokenServiceTest {
         assertThatThrownBy(action::run)
                 .isInstanceOfSatisfying(
                         BusinessException.class,
-                        exception -> assertThat(exception.getErrorCode())
-                                .isEqualTo(expected)
+                        exception ->
+                                assertThat(exception.getErrorCode())
+                                        .isEqualTo(expected)
                 );
     }
 }
