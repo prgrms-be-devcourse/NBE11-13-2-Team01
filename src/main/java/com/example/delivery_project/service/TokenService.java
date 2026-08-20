@@ -1,8 +1,8 @@
 package com.example.delivery_project.service;
 
-import com.example.delivery_project.domain.entity.token.RefreshToken;
 import com.example.delivery_project.domain.entity.user.User;
-import com.example.delivery_project.domain.repository.RefreshTokenRepository;
+import com.example.delivery_project.domain.repository.RefreshTokenRedisRepository;
+import com.example.delivery_project.domain.repository.UserRepository;
 import com.example.delivery_project.exception.AuthException;
 import com.example.delivery_project.exception.global.BusinessException;
 import com.example.delivery_project.security.jwt.JwtProperties;
@@ -13,7 +13,6 @@ import jakarta.servlet.http.Cookie;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Service
@@ -22,7 +21,9 @@ public class TokenService {
 
     private final TokenProvider tokenProvider;
     private final JwtProperties jwtProperties;
-    private final RefreshTokenRepository refreshTokenRepository;
+    // DB -> Redis 버전 repository로 교체
+    private final RefreshTokenRedisRepository refreshTokenRedisRepository;
+    private final UserRepository userRepository;
 
     public record TokenPair(
             String accessToken,
@@ -31,38 +32,23 @@ public class TokenService {
     }
 
     // access token, refresh token 발급
-    // 발급한 refresh token을 DB에도 저장
-    @Transactional
+    // 발급한 refresh token을 Redis에도 저장
     public TokenPair issueToken(User user) {
         String accessToken = tokenProvider.generateToken(user, jwtProperties.getAccessTokenValidity());
         String refreshToken = tokenProvider.generateToken(user, jwtProperties.getRefreshTokenValidity());
 
-       saveRefreshToken(user, refreshToken);
+        saveRefreshToken(user, refreshToken);
         log.debug("Token issued. userId: {}", user.getId());
 
         return new TokenPair(accessToken, refreshToken);
     }
 
-    // refresh token을 DB에 새로 저장 혹은 기존 값 업데이트
+    // refresh token을 Redis에 저장
     private void saveRefreshToken(User user, String token) {
-
-        // 해당 User의 refresh token 찾기
-        RefreshToken refreshToken = refreshTokenRepository
-                .findByUserId(user.getId())
-                .orElse(null);
-
-        // 새로 가입한 회원이라면 refresh token을 새로 저장
-        if(refreshToken == null) {
-            refreshTokenRepository.save(RefreshToken.of(user, token));
-            return;
-        }
-
-        // 기존 회원이라면 재발급한 refresh token으로 업데이트
-        refreshToken.updateToken(token);
+        refreshTokenRedisRepository.save(user.getId(), token, jwtProperties.getRefreshTokenValidity());
     }
 
-    // access token, refresh token 재발급 (refresh token rotation)
-    @Transactional
+     // access token, refresh token 재발급 (refresh token rotation)
     public TokenPair refreshToken(Cookie[] cookies) {
 
         // cookie에서 refresh token 추출
@@ -72,7 +58,7 @@ public class TokenService {
             throw new BusinessException(AuthException.REFRESH_TOKEN_NOT_FOUND);
         }
 
-        // 1. 자체 유효성 검사
+        // 1. JWT 자체 유효성 검사
         TokenStatus status = tokenProvider.validateToken(refreshToken);
 
         if(status == TokenStatus.EXPIRED) {
@@ -81,19 +67,28 @@ public class TokenService {
             throw new BusinessException(AuthException.INVALID_REFRESH_TOKEN);
         }
 
-        // 2. DB에 저장되어 있는 refresh token인지 검사
-        RefreshToken storedRefreshToken = refreshTokenRepository
-                .findByToken(refreshToken)
+        // 2. 검증된 refresh token에서 userId 추출
+        User tokenUser = tokenProvider.getTokenDetails(refreshToken);
+        Long userId = tokenUser.getId();
+
+        // 3. userId로 Redis에 저장되어 있는 refresh token인지 검사
+        String storedRefreshToken = refreshTokenRedisRepository
+                .findByUserId(userId)
                 .orElseThrow(() -> new BusinessException(AuthException.INVALID_REFRESH_TOKEN));
 
-        // 검증된 refresh token을 통해 access token, refresh token 재발급 (refresh token rotation)
-        // refresh token에서 User를 직접 추출(getTokenDetails())하는 것이 아닌
-        // refresh token과 연결된 현재 DB의 User 추출
-        User user = storedRefreshToken.getUser();
+        if(!storedRefreshToken.equals(refreshToken)) {
+            throw new BusinessException(AuthException.INVALID_REFRESH_TOKEN);
+        }
 
-        TokenPair tokenPair = issueToken(user);
+        // 4. userId로 DB에서 현재 User 조회
+        User dbUser = userRepository
+                .findById(userId)
+                .orElseThrow(() -> new BusinessException(AuthException.INVALID_REFRESH_TOKEN));
 
-        log.debug("Token refreshed. userId: {}", user.getId());
+        // 5. 조회한 User 정보로 access token, refresh token 재발급 (refresh token rotation)
+        TokenPair tokenPair = issueToken(dbUser);
+
+        log.debug("Token refreshed. userId: {}", dbUser.getId());
 
         return tokenPair;
     }
@@ -111,10 +106,9 @@ public class TokenService {
         return null;
     }
 
-    // 로그아웃 시 DB에 저장된 refresh token(row 전체) 삭제
-    @Transactional
+    // 로그아웃 시 Redis에 저장된 refresh token 삭제
     public void logout(Long userId) {
-        refreshTokenRepository.deleteByUserId(userId);
+        refreshTokenRedisRepository.deleteByUserId(userId);
         log.info("[AUTH] 로그아웃 처리 완료 userId: {}", userId);
     }
 }
