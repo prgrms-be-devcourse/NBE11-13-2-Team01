@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.Collection;
 import java.util.List;
 
 public interface WeatherRepository extends JpaRepository<Weather, Long> {
@@ -28,6 +29,14 @@ public interface WeatherRepository extends JpaRepository<Weather, Long> {
             LocalDate startDate,
             LocalDate endDate,
             List<String> categories
+    );
+
+    List<Weather> findByNxInAndNyInAndFcstDateBetweenAndCategoryIn(
+            Collection<Integer> nxValues,
+            Collection<Integer> nyValues,
+            LocalDate startDate,
+            LocalDate endDate,
+            Collection<String> categories
     );
 
     @Modifying

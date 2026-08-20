@@ -4,6 +4,7 @@ import com.example.delivery_project.domain.entity.delivery.DeliveryPlan;
 import com.example.delivery_project.domain.entity.delivery.DeliveryStop;
 import com.example.delivery_project.domain.entity.delivery.RiskAssessment;
 import com.example.delivery_project.domain.repository.DeliveryPlanRepository;
+import com.example.delivery_project.domain.repository.RiskAssessmentRepository;
 import com.example.delivery_project.dto.response.NextStopRecommendationResponse;
 import com.example.delivery_project.enums.RiskLevel;
 import com.example.delivery_project.exception.DeliveryException;
@@ -38,6 +39,7 @@ public class NextStopRecommendationService {
     private static final double ESTIMATED_SPEED_METERS_PER_SECOND = 30_000.0 / 3_600.0;
 
     private final DeliveryPlanRepository deliveryPlanRepository;
+    private final RiskAssessmentRepository riskAssessmentRepository;
     private final RouteOptimizer routeOptimizer;
     private final DrivingDirectionsClient drivingDirectionsClient;
 
@@ -56,6 +58,12 @@ public class NextStopRecommendationService {
                     currentPoint.responseStopId()
             );
         }
+
+        riskAssessmentRepository.findAllWithFactorsByDeliveryStopIdIn(
+                candidates.stream()
+                        .map(DeliveryStop::getId)
+                        .toList()
+        );
 
         RiskPriority safestPriority = candidates.stream()
                 .map(this::riskPriority)
@@ -125,7 +133,8 @@ public class NextStopRecommendationService {
             Long planId,
             Long driverId
     ) {
-        return deliveryPlanRepository.findByIdAndDriverId(planId, driverId)
+        return deliveryPlanRepository
+                .findWithStopsAndRiskByIdAndDriverId(planId, driverId)
                 .orElseThrow(() -> new BusinessException(
                         DeliveryException.DELIVERY_PLAN_NOT_FOUND
                 ));

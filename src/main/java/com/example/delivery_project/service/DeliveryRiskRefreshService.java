@@ -33,14 +33,16 @@ public class DeliveryRiskRefreshService {
 
     public void refreshActiveStops() {
         refreshStops(
-                deliveryStopRepository.findAllByStatusIn(ACTIVE_STATUSES)
+                deliveryStopRepository.findAllWithRiskByStatusIn(
+                        ACTIVE_STATUSES
+                )
         );
     }
 
     public void refreshPlan(Long planId) {
         refreshStops(
                 deliveryStopRepository
-                        .findAllByDeliveryPlanIdAndStatusIn(
+                        .findAllWithRiskByDeliveryPlanIdAndStatusIn(
                                 planId,
                                 ACTIVE_STATUSES
                         )
@@ -67,28 +69,14 @@ public class DeliveryRiskRefreshService {
         );
 
         for (Map.Entry<GridCoordinate, List<DeliveryStop>> entry : stopsByCoordinate.entrySet()) {
-            refreshCoordinate(
-                    entry.getKey(),
-                    entry.getValue(),
-                    baseDateTime
-            );
+            updateWeather(entry.getKey(), baseDateTime);
         }
-    }
-
-    private void refreshCoordinate(
-            GridCoordinate coordinate,
-            List<DeliveryStop> stops,
-            WeatherUpdater.BaseDateTime baseDateTime
-    ) {
-        updateWeather(coordinate, baseDateTime);
 
         try {
-            riskAssessmentService.updateAssessments(stops);
+            riskAssessmentService.updateAssessments(List.copyOf(stops));
         } catch (Exception e) {
             log.error(
-                    "배송지 위험도 갱신 실패. nx={}, ny={}, stopIds={}",
-                    coordinate.nx(),
-                    coordinate.ny(),
+                    "배송지 위험도 일괄 갱신 실패. stopIds={}",
                     stops.stream().map(DeliveryStop::getId).toList(),
                     e
             );

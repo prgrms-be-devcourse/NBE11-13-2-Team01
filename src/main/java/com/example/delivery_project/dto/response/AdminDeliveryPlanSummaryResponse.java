@@ -1,6 +1,6 @@
 package com.example.delivery_project.dto.response;
 
-import com.example.delivery_project.domain.entity.delivery.DeliveryPlan;
+import com.example.delivery_project.dto.projection.DeliveryPlanSummaryProjection;
 import com.example.delivery_project.enums.DeliveryPlanStatus;
 
 import java.time.LocalDateTime;
@@ -21,22 +21,24 @@ public record AdminDeliveryPlanSummaryResponse(
         long remainingBoxes,
         long dangerStops
 ) {
-    public static AdminDeliveryPlanSummaryResponse from(DeliveryPlan plan) {
+    public static AdminDeliveryPlanSummaryResponse from(
+            DeliveryPlanSummaryProjection summary
+    ) {
         return new AdminDeliveryPlanSummaryResponse(
-                plan.getId(),
-                plan.getDriver().getId(),
-                plan.getDriver().getLoginId(),
-                plan.getDriver().getName(),
-                plan.getDepartureLocation(),
-                plan.getScheduledDepartureAt(),
-                plan.getActualDepartureAt(),
-                plan.getCompletedAt(),
-                plan.getStatus(),
-                plan.getTotalStops(),
-                plan.getRemainingStops(),
-                plan.getTotalBoxes(),
-                plan.getRemainingBoxes(),
-                plan.getDangerStops()
+                summary.getPlanId(),
+                summary.getDriverId(),
+                summary.getDriverLoginId(),
+                summary.getDriverName(),
+                summary.getDepartureLocation(),
+                summary.getScheduledDepartureAt(),
+                summary.getActualDepartureAt(),
+                summary.getCompletedAt(),
+                DeliveryPlanStatus.valueOf(summary.getStatus()),
+                summary.getTotalStops().intValue(),
+                summary.getRemainingStops().longValue(),
+                summary.getTotalBoxes().longValue(),
+                summary.getRemainingBoxes().longValue(),
+                summary.getDangerStops().longValue()
         );
     }
 }

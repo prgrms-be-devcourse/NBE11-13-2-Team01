@@ -17,16 +17,18 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
+import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -74,9 +76,9 @@ class RiskAssessmentServiceTest {
         );
 
         when(weatherRepository
-                .findByNxAndNyAndFcstDateBetweenAndCategoryIn(
-                        anyInt(),
-                        anyInt(),
+                .findByNxInAndNyInAndFcstDateBetweenAndCategoryIn(
+                        any(),
+                        any(),
                         any(),
                         any(),
                         any()
@@ -106,9 +108,9 @@ class RiskAssessmentServiceTest {
         givenStopAndAssessment(assessment);
 
         when(weatherRepository
-                .findByNxAndNyAndFcstDateBetweenAndCategoryIn(
-                        anyInt(),
-                        anyInt(),
+                .findByNxInAndNyInAndFcstDateBetweenAndCategoryIn(
+                        any(),
+                        any(),
                         any(),
                         any(),
                         any()
@@ -140,9 +142,9 @@ class RiskAssessmentServiceTest {
                 weather(forecastAt, "PTY", "1")
         );
         when(weatherRepository
-                .findByNxAndNyAndFcstDateBetweenAndCategoryIn(
-                        anyInt(),
-                        anyInt(),
+                .findByNxInAndNyInAndFcstDateBetweenAndCategoryIn(
+                        any(),
+                        any(),
                         any(),
                         any(),
                         any()
@@ -168,8 +170,9 @@ class RiskAssessmentServiceTest {
     @Test
     void 배송지의_위험도_평가가_없으면_예외가_발생한다() {
         when(stop.getId()).thenReturn(999L);
-        when(riskAssessmentRepository.findByDeliveryStopId(999L))
-                .thenReturn(Optional.empty());
+        when(riskAssessmentRepository
+                .findAllWithFactorsByDeliveryStopIdIn(List.of(999L)))
+                .thenReturn(List.of());
 
         assertThatThrownBy(
                 () -> riskAssessmentService.updateAssessments(List.of(stop))
@@ -182,12 +185,53 @@ class RiskAssessmentServiceTest {
         verifyNoInteractions(weatherRepository, riskFactorCalculator);
     }
 
+    @Test
+    void 여러_배송지의_위험도와_날씨를_각각_한번에_조회한다() {
+        List<DeliveryStop> stops = IntStream.rangeClosed(1, 10)
+                .mapToObj(index -> {
+                    DeliveryStop deliveryStop = mock(DeliveryStop.class);
+                    when(deliveryStop.getId()).thenReturn((long) index);
+                    when(deliveryStop.getLatitude()).thenReturn(37.5665);
+                    when(deliveryStop.getLongitude()).thenReturn(126.9780);
+                    return deliveryStop;
+                })
+                .toList();
+        List<Long> stopIds = stops.stream()
+                .map(DeliveryStop::getId)
+                .toList();
+        List<RiskAssessment> assessments = stops.stream()
+                .map(deliveryStop -> RiskAssessment.of(
+                        deliveryStop,
+                        LocalDateTime.now()
+                ))
+                .toList();
+        when(riskAssessmentRepository
+                .findAllWithFactorsByDeliveryStopIdIn(stopIds))
+                .thenReturn(assessments);
+        when(weatherRepository
+                .findByNxInAndNyInAndFcstDateBetweenAndCategoryIn(
+                        any(), any(), any(), any(), any()
+                ))
+                .thenReturn(List.of());
+
+        riskAssessmentService.updateAssessments(stops);
+
+        verify(riskAssessmentRepository, times(1))
+                .findAllWithFactorsByDeliveryStopIdIn(stopIds);
+        verify(weatherRepository, times(1))
+                .findByNxInAndNyInAndFcstDateBetweenAndCategoryIn(
+                        any(), any(), any(), any(), any()
+                );
+    }
+
     private void givenStopAndAssessment(RiskAssessment assessment) {
         when(stop.getId()).thenReturn(1L);
         when(stop.getLatitude()).thenReturn(37.5665);
         when(stop.getLongitude()).thenReturn(126.9780);
-        when(riskAssessmentRepository.findByDeliveryStopId(eq(1L)))
-                .thenReturn(Optional.of(assessment));
+        ReflectionTestUtils.setField(assessment, "deliveryStop", stop);
+        when(riskAssessmentRepository
+                .findAllWithFactorsByDeliveryStopIdIn(eq(List.of(1L))))
+                .thenReturn(List.of(assessment));
     }
 
     private Weather weather(
@@ -196,6 +240,8 @@ class RiskAssessmentServiceTest {
             String value
     ) {
         Weather weather = mock(Weather.class);
+        when(weather.getNx()).thenReturn(60);
+        when(weather.getNy()).thenReturn(127);
         when(weather.getFcstDate()).thenReturn(forecastAt.toLocalDate());
         when(weather.getFcstTime()).thenReturn(forecastAt.toLocalTime());
         when(weather.getCategory()).thenReturn(category);

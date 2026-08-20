@@ -86,12 +86,12 @@ class DeliveryRiskRefreshServiceTest {
 
     @Test
     void READY와_DELIVERING_배송지만_전체_갱신_대상으로_조회한다() {
-        when(deliveryStopRepository.findAllByStatusIn(anyCollection()))
+        when(deliveryStopRepository.findAllWithRiskByStatusIn(anyCollection()))
                 .thenReturn(List.of());
 
         deliveryRiskRefreshService.refreshActiveStops();
 
-        verify(deliveryStopRepository).findAllByStatusIn(
+        verify(deliveryStopRepository).findAllWithRiskByStatusIn(
                 argThat(statuses ->
                         statuses.contains(DeliveryStopStatus.READY)
                                 && statuses.contains(DeliveryStopStatus.DELIVERING)
@@ -104,7 +104,7 @@ class DeliveryRiskRefreshServiceTest {
     @Test
     void 계획_생성_후에는_해당_계획의_활성_배송지만_조회한다() {
         when(deliveryStopRepository
-                .findAllByDeliveryPlanIdAndStatusIn(
+                .findAllWithRiskByDeliveryPlanIdAndStatusIn(
                         eq(10L),
                         anyCollection()
                 ))
@@ -113,7 +113,7 @@ class DeliveryRiskRefreshServiceTest {
         deliveryRiskRefreshService.refreshPlan(10L);
 
         verify(deliveryStopRepository)
-                .findAllByDeliveryPlanIdAndStatusIn(
+                .findAllWithRiskByDeliveryPlanIdAndStatusIn(
                         eq(10L),
                         argThat(statuses ->
                                 statuses.contains(DeliveryStopStatus.READY)
@@ -125,7 +125,7 @@ class DeliveryRiskRefreshServiceTest {
     }
 
     @Test
-    void 서로_다른_격자는_각각_날씨와_위험도를_갱신한다() {
+    void 서로_다른_격자는_날씨를_각각_갱신하고_위험도는_한번에_갱신한다() {
         givenBaseDateTime();
         when(firstStop.getLatitude()).thenReturn(37.5665);
         when(firstStop.getLongitude()).thenReturn(126.9780);
@@ -140,7 +140,7 @@ class DeliveryRiskRefreshServiceTest {
 
         verify(weatherService, times(2))
                 .save(any(WeatherRequest.class));
-        verify(riskAssessmentService, times(2))
+        verify(riskAssessmentService, times(1))
                 .updateAssessments(any());
     }
 
