@@ -17,7 +17,8 @@ public record NextStopRecommendationResponse(
         int candidateCount,
         List<Long> candidateStopIds,
         List<Long> optimizedSafestRouteStopIds,
-        Long estimatedTravelSeconds
+        Long estimatedTravelSeconds,
+        Long kakaoTravelSeconds
 ) {
     public NextStopRecommendationResponse {
         candidateStopIds = List.copyOf(candidateStopIds);
@@ -39,6 +40,7 @@ public record NextStopRecommendationResponse(
                 0,
                 List.of(),
                 List.of(),
+                null,
                 null
         );
     }
@@ -49,7 +51,8 @@ public record NextStopRecommendationResponse(
             int candidateCount,
             List<Long> candidateStopIds,
             List<Long> optimizedSafestRouteStopIds,
-            long estimatedTravelSeconds
+            long estimatedTravelSeconds,
+            Long kakaoTravelSeconds
     ) {
         return new NextStopRecommendationResponse(
                 true,
@@ -63,7 +66,8 @@ public record NextStopRecommendationResponse(
                 candidateCount,
                 candidateStopIds,
                 optimizedSafestRouteStopIds,
-                estimatedTravelSeconds
+                estimatedTravelSeconds,
+                kakaoTravelSeconds
         );
     }
 }

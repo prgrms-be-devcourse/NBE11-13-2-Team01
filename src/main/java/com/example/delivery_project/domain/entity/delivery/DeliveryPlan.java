@@ -127,6 +127,21 @@ public class DeliveryPlan {
                 .count();
     }
 
+    public long getTotalBoxes() {
+        return deliveryStops.stream()
+                .flatMap(stop -> stop.getDeliveryItems().stream())
+                .mapToLong(DeliveryItem::getQuantity)
+                .sum();
+    }
+
+    public long getRemainingBoxes() {
+        return deliveryStops.stream()
+                .filter(stop -> !stop.isCompleted())
+                .flatMap(stop -> stop.getDeliveryItems().stream())
+                .mapToLong(DeliveryItem::getQuantity)
+                .sum();
+    }
+
     public long getDangerStops() {
         return deliveryStops.stream()
                 .filter(d -> !d.isCompleted())

@@ -16,12 +16,18 @@ public record DeliveryPlanSummaryResponse(
         LocalDateTime scheduledDepartureAt,
         @Schema(description = "실제 출발 시각", example = "2026-01-01T00:00:00")
         LocalDateTime actualDepartureAt,
+        @Schema(description = "배송 완료 시각", example = "2026-01-01T03:00:00")
+        LocalDateTime completedAt,
         @Schema(description = "배송 상태", example = "DELIVERING")
         DeliveryPlanStatus status,
         @Schema(description = "총 배송지 수", example = "1")
         int totalStops,
         @Schema(description = "남은 배송지 수", example = "1")
         long remainingStops,
+        @Schema(description = "전체 배송 물량(박스 수)", example = "12")
+        long totalBoxes,
+        @Schema(description = "남은 배송 물량(박스 수)", example = "7")
+        long remainingBoxes,
         @Schema(description = "위험 배송지 수", example = "1")
         long dangerStops
 ) {
@@ -31,9 +37,12 @@ public record DeliveryPlanSummaryResponse(
                 plan.getDepartureLocation(),
                 plan.getScheduledDepartureAt(),
                 plan.getActualDepartureAt(),
+                plan.getCompletedAt(),
                 plan.getStatus(),
                 plan.getTotalStops(),
                 plan.getRemainingStops(),
+                plan.getTotalBoxes(),
+                plan.getRemainingBoxes(),
                 plan.getDangerStops()
         );
     }

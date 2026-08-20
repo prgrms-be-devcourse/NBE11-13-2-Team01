@@ -69,6 +69,8 @@ class AdminDeliveryPlanServiceTest {
             assertThat(response.driverLoginId()).isEqualTo("driver");
             assertThat(response.driverName()).isEqualTo("배송기사");
             assertThat(response.totalStops()).isEqualTo(1);
+            assertThat(response.totalBoxes()).isZero();
+            assertThat(response.remainingBoxes()).isZero();
         });
     }
 

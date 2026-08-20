@@ -11,6 +11,7 @@ import com.example.delivery_project.enums.RiskLevel;
 import com.example.delivery_project.enums.Role;
 import com.example.delivery_project.exception.DeliveryException;
 import com.example.delivery_project.exception.global.BusinessException;
+import com.example.delivery_project.service.component.DrivingDirectionsClient;
 import com.example.delivery_project.service.component.route.DijkstraRouteOptimizer;
 import com.example.delivery_project.spec.Location;
 import org.junit.jupiter.api.BeforeEach;
@@ -23,9 +24,12 @@ import org.springframework.test.util.ReflectionTestUtils;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.OptionalLong;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.anyDouble;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -34,6 +38,9 @@ class NextStopRecommendationServiceTest {
     @Mock
     private DeliveryPlanRepository deliveryPlanRepository;
 
+    @Mock
+    private DrivingDirectionsClient drivingDirectionsClient;
+
     private NextStopRecommendationService service;
     private DeliveryPlan plan;
 
@@ -41,8 +48,16 @@ class NextStopRecommendationServiceTest {
     void setUp() {
         service = new NextStopRecommendationService(
                 deliveryPlanRepository,
-                new DijkstraRouteOptimizer()
+                new DijkstraRouteOptimizer(),
+                drivingDirectionsClient
         );
+        lenient().when(drivingDirectionsClient.findTravelDurationSeconds(
+                        anyDouble(),
+                        anyDouble(),
+                        anyDouble(),
+                        anyDouble()
+                ))
+                .thenReturn(OptionalLong.empty());
 
         User driver = User.of(
                 1L,
@@ -83,6 +98,13 @@ class NextStopRecommendationServiceTest {
         plan.completeStop(first.getId());
         when(deliveryPlanRepository.findByIdAndDriverId(10L, 1L))
                 .thenReturn(Optional.of(plan));
+        when(drivingDirectionsClient.findTravelDurationSeconds(
+                        37.501,
+                        126.901,
+                        37.504,
+                        126.904
+                ))
+                .thenReturn(OptionalLong.of(1_125));
 
         NextStopRecommendationResponse response = service.recommend(10L, 1L);
 
@@ -97,6 +119,7 @@ class NextStopRecommendationServiceTest {
         assertThat(response.optimizedSafestRouteStopIds())
                 .containsExactly(104L);
         assertThat(response.estimatedTravelSeconds()).isPositive();
+        assertThat(response.kakaoTravelSeconds()).isEqualTo(1_125);
     }
 
     @Test
@@ -117,6 +140,8 @@ class NextStopRecommendationServiceTest {
         assertThat(response.recommendedStopId()).isEqualTo(103L);
         assertThat(response.optimizedSafestRouteStopIds())
                 .containsExactly(103L, 102L);
+        assertThat(response.estimatedTravelSeconds()).isPositive();
+        assertThat(response.kakaoTravelSeconds()).isNull();
     }
 
     @Test
