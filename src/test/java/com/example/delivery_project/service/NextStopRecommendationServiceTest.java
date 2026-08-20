@@ -5,6 +5,7 @@ import com.example.delivery_project.domain.entity.delivery.DeliveryPlanFactory;
 import com.example.delivery_project.domain.entity.delivery.DeliveryStop;
 import com.example.delivery_project.domain.entity.user.User;
 import com.example.delivery_project.domain.repository.DeliveryPlanRepository;
+import com.example.delivery_project.domain.repository.RiskAssessmentRepository;
 import com.example.delivery_project.dto.response.NextStopRecommendationResponse;
 import com.example.delivery_project.enums.RiskFactorType;
 import com.example.delivery_project.enums.RiskLevel;
@@ -30,6 +31,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -37,6 +39,9 @@ class NextStopRecommendationServiceTest {
 
     @Mock
     private DeliveryPlanRepository deliveryPlanRepository;
+
+    @Mock
+    private RiskAssessmentRepository riskAssessmentRepository;
 
     @Mock
     private DrivingDirectionsClient drivingDirectionsClient;
@@ -48,6 +53,7 @@ class NextStopRecommendationServiceTest {
     void setUp() {
         service = new NextStopRecommendationService(
                 deliveryPlanRepository,
+                riskAssessmentRepository,
                 new DijkstraRouteOptimizer(),
                 drivingDirectionsClient
         );
@@ -96,7 +102,7 @@ class NextStopRecommendationServiceTest {
 
         plan.start();
         plan.completeStop(first.getId());
-        when(deliveryPlanRepository.findByIdAndDriverId(10L, 1L))
+        when(deliveryPlanRepository.findWithStopsAndRiskByIdAndDriverId(10L, 1L))
                 .thenReturn(Optional.of(plan));
         when(drivingDirectionsClient.findTravelDurationSeconds(
                         37.501,
@@ -120,6 +126,10 @@ class NextStopRecommendationServiceTest {
                 .containsExactly(104L);
         assertThat(response.estimatedTravelSeconds()).isPositive();
         assertThat(response.kakaoTravelSeconds()).isEqualTo(1_125);
+        verify(riskAssessmentRepository)
+                .findAllWithFactorsByDeliveryStopIdIn(
+                        List.of(102L, 103L, 104L, 105L, 106L)
+                );
     }
 
     @Test
@@ -132,7 +142,7 @@ class NextStopRecommendationServiceTest {
 
         plan.start();
         plan.completeStop(first.getId());
-        when(deliveryPlanRepository.findByIdAndDriverId(10L, 1L))
+        when(deliveryPlanRepository.findWithStopsAndRiskByIdAndDriverId(10L, 1L))
                 .thenReturn(Optional.of(plan));
 
         NextStopRecommendationResponse response = service.recommend(10L, 1L);
@@ -153,7 +163,7 @@ class NextStopRecommendationServiceTest {
 
         plan.start();
         plan.completeStop(first.getId());
-        when(deliveryPlanRepository.findByIdAndDriverId(10L, 1L))
+        when(deliveryPlanRepository.findWithStopsAndRiskByIdAndDriverId(10L, 1L))
                 .thenReturn(Optional.of(plan));
 
         NextStopRecommendationResponse response = service.recommend(10L, 1L);
@@ -165,7 +175,7 @@ class NextStopRecommendationServiceTest {
     @Test
     void 배송중이_아니면_추천할_수_없다() {
         addStop(101L, 37.50, 126.90);
-        when(deliveryPlanRepository.findByIdAndDriverId(10L, 1L))
+        when(deliveryPlanRepository.findWithStopsAndRiskByIdAndDriverId(10L, 1L))
                 .thenReturn(Optional.of(plan));
 
         assertThatThrownBy(() -> service.recommend(10L, 1L))
