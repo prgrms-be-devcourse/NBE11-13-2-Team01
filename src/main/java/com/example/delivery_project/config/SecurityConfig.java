@@ -60,7 +60,8 @@ public class SecurityConfig {
                                 // TODO 허용할 API 추가
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
-                                "/error"
+                                "/error",
+                                "/actuator/**"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
