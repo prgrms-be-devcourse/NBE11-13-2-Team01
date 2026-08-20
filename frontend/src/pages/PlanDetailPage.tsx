@@ -35,7 +35,12 @@ import type {
   NextStopRecommendation,
   ProductType,
 } from '../types/api'
-import { errorMessage, formatDateTime } from '../utils/format'
+import {
+  errorMessage,
+  formatDateTime,
+  maskLoginId,
+  maskName,
+} from '../utils/format'
 
 const PRODUCT_LABEL: Record<ProductType, string> = {
   NORMAL: '상온',
@@ -171,6 +176,10 @@ export function PlanDetailPage() {
   const allStopsCompleted = plan?.deliveryStops.every((stop) => stop.status === 'COMPLETED') ?? false
   const completedStopCount = plan?.deliveryStops.filter((stop) => stop.status === 'COMPLETED').length ?? 0
   const remainingStopCount = (plan?.deliveryStops.length ?? 0) - completedStopCount
+  const hasKakaoTravelTime = typeof recommendation?.kakaoTravelSeconds === 'number'
+  const displayedTravelSeconds = recommendation?.kakaoTravelSeconds
+    ?? recommendation?.estimatedTravelSeconds
+    ?? 0
   const visibleStops = useMemo(
     () => orderedStops.filter((stop) => (
       stopView === 'completed'
@@ -211,7 +220,7 @@ export function PlanDetailPage() {
           </p>
           {assignedDriver && (
             <p className="assigned-driver-copy">
-              담당 기사 · <strong>{assignedDriver.name}</strong> ({assignedDriver.loginId}, #{assignedDriver.driverId})
+              담당 기사 · <strong>{maskName(assignedDriver.name)}</strong> ({maskLoginId(assignedDriver.loginId)}, #{assignedDriver.driverId})
             </p>
           )}
         </div>
@@ -299,9 +308,9 @@ export function PlanDetailPage() {
                   <strong>{recommendation.riskScore}</strong>
                 </span>
                 <span>
-                  예상 이동
+                  {hasKakaoTravelTime ? '카카오 예상' : '예상 이동'}
                   <strong>
-                    약 {Math.max(1, Math.ceil((recommendation.estimatedTravelSeconds ?? 0) / 60))}분
+                    약 {Math.max(1, Math.ceil(displayedTravelSeconds / 60))}분
                   </strong>
                 </span>
               </div>
@@ -411,7 +420,7 @@ export function PlanDetailPage() {
                         )}
                       </div>
                       <h3>{stop.address}</h3>
-                      <small>배송지 #{stop.stopId} · {stop.latitude.toFixed(4)}, {stop.longitude.toFixed(4)}</small>
+                      <small>배송지 #{stop.stopId}</small>
                     </div>
                     <div className="risk-score">
                       <span>위험 점수</span>

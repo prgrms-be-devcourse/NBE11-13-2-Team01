@@ -8,6 +8,9 @@ import com.example.delivery_project.domain.repository.RiskAssessmentRepository;
 import com.example.delivery_project.domain.repository.WeatherRepository;
 import com.example.delivery_project.enums.RiskFactorType;
 import com.example.delivery_project.enums.RiskLevel;
+import com.example.delivery_project.exception.RiskException;
+import com.example.delivery_project.exception.global.BusinessException;
+import com.example.delivery_project.service.component.DemoRiskScenarioPolicy;
 import com.example.delivery_project.service.component.RiskFactorCalculator;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -39,6 +42,9 @@ class RiskAssessmentServiceTest {
 
     @Mock
     private RiskAssessmentRepository riskAssessmentRepository;
+
+    @Mock
+    private DemoRiskScenarioPolicy demoRiskScenarioPolicy;
 
     @Mock
     private DeliveryStop stop;
@@ -167,8 +173,11 @@ class RiskAssessmentServiceTest {
 
         assertThatThrownBy(
                 () -> riskAssessmentService.updateAssessments(List.of(stop))
-        ).isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("stopId=999");
+        ).isInstanceOfSatisfying(
+                BusinessException.class,
+                exception -> assertThat(exception.getErrorCode())
+                        .isEqualTo(RiskException.RISK_NOT_FOUND)
+        );
 
         verifyNoInteractions(weatherRepository, riskFactorCalculator);
     }

@@ -22,7 +22,7 @@ export function AppLayout() {
         </NavLink>
 
         <nav className="main-nav" aria-label="주요 메뉴">
-          <NavLink to="/plans">
+          <NavLink to="/plans" end>
             {user?.role === 'ROLE_ADMIN' ? '전체 배송 계획' : '내 배송 계획'}
           </NavLink>
           {user?.role === 'ROLE_ADMIN' && (

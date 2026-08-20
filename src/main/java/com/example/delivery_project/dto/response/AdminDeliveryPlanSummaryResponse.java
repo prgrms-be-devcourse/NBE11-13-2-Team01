@@ -13,9 +13,12 @@ public record AdminDeliveryPlanSummaryResponse(
         String departureLocation,
         LocalDateTime scheduledDepartureAt,
         LocalDateTime actualDepartureAt,
+        LocalDateTime completedAt,
         DeliveryPlanStatus status,
         int totalStops,
         long remainingStops,
+        long totalBoxes,
+        long remainingBoxes,
         long dangerStops
 ) {
     public static AdminDeliveryPlanSummaryResponse from(DeliveryPlan plan) {
@@ -27,9 +30,12 @@ public record AdminDeliveryPlanSummaryResponse(
                 plan.getDepartureLocation(),
                 plan.getScheduledDepartureAt(),
                 plan.getActualDepartureAt(),
+                plan.getCompletedAt(),
                 plan.getStatus(),
                 plan.getTotalStops(),
                 plan.getRemainingStops(),
+                plan.getTotalBoxes(),
+                plan.getRemainingBoxes(),
                 plan.getDangerStops()
         );
     }
