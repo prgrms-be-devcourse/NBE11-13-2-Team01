@@ -6,6 +6,9 @@ import com.example.delivery_project.enums.RiskFactorType;
 import com.example.delivery_project.domain.entity.weather.Weather;
 import com.example.delivery_project.domain.repository.RiskAssessmentRepository;
 import com.example.delivery_project.domain.repository.WeatherRepository;
+import com.example.delivery_project.exception.RiskException;
+import com.example.delivery_project.exception.global.BusinessException;
+import com.example.delivery_project.service.component.DemoRiskScenarioPolicy;
 import com.example.delivery_project.service.component.LocationConverter;
 import com.example.delivery_project.service.component.RiskFactorCalculator;
 import lombok.RequiredArgsConstructor;
@@ -36,6 +39,7 @@ public class RiskAssessmentService {
     private final WeatherRepository weatherRepository;
     private final RiskFactorCalculator riskFactorCalculator;
     private final RiskAssessmentRepository riskAssessmentRepository;
+    private final DemoRiskScenarioPolicy demoRiskScenarioPolicy;
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void updateAssessments(
@@ -49,13 +53,26 @@ public class RiskAssessmentService {
     private void updateAssessment(DeliveryStop stop) {
         RiskAssessment assessment = riskAssessmentRepository
                 .findByDeliveryStopId(stop.getId())
-                //TODO 커스텀 에외로 변경
-                .orElseThrow(() -> new IllegalStateException(
-                        "위험도 평가가 존재하지 않습니다. stopId="
-                                + stop.getId()
-                ));
+                .orElseThrow(()
+                       -> new BusinessException(RiskException.RISK_NOT_FOUND)
+                );
 
         LocalDateTime analyzedAt = LocalDateTime.now();
+
+        if (demoRiskScenarioPolicy.applyIfEnabled(
+                stop.getId(),
+                assessment,
+                analyzedAt
+        )) {
+            log.info(
+                    "데모 위험도 시나리오를 적용합니다. stopId={}, level={}, score={}",
+                    stop.getId(),
+                    assessment.getLevel(),
+                    assessment.getScore()
+            );
+            return;
+        }
+
         Optional<Map<String, String>> weatherValues =
                 fetchWeatherValues(stop, analyzedAt);
 

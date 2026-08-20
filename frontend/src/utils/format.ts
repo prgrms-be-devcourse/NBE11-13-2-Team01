@@ -15,3 +15,17 @@ export function toDateTimeLocal(value: string) {
 export function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : '요청을 처리하지 못했습니다.'
 }
+
+export function maskName(value: string) {
+  const characters = Array.from(value.trim())
+  if (characters.length === 0) return '-'
+
+  return `${characters[0]}${'*'.repeat(Math.max(2, characters.length - 1))}`
+}
+
+export function maskLoginId(value: string) {
+  const characters = Array.from(value.trim())
+  if (characters.length === 0) return '-'
+
+  return `**${characters.slice(-3).join('')}`
+}

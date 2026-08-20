@@ -49,9 +49,15 @@ public class SecurityConfig {
                                 "/favicon.svg",
                                 "/icons.svg",
                                 "/assets/**",
+                                "/login",
+                                "/plans",
+                                "/plans/**",
                                 "/api/users/join",
                                 "/api/users/login",
                                 "/api/tokens/refresh",
+                                // local 프로필에서만 Controller가 생성되는 개발용 Access Token API
+                                "/api/dev/tokens",
+                                // TODO 허용할 API 추가
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
                                 "/error"

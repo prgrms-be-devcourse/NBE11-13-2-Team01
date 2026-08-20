@@ -1,5 +1,7 @@
 package com.example.delivery_project.domain.entity.weather;
 
+import com.example.delivery_project.exception.RiskException;
+import com.example.delivery_project.exception.global.BusinessException;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -85,16 +87,14 @@ public class Weather {
     //격좌 좌표 검증
     private static void validateLocation(Integer nx, Integer ny) {
         if (nx == null || ny == null) {
-            // TODO Weather 커스텀 예외로 교체
-            throw new IllegalArgumentException("격자 좌표(nx, ny)는 필수입니다.");
+            throw new BusinessException(RiskException.RISK_ARGUMENT_NOT_IMPLEMENTED,"격자 좌표(nx, ny)는 필수입니다.");
         }
     }
 
     //카테고리 검증
     private static void validateCategory(String category) {
         if (category == null || category.isBlank()) {
-            // TODO Weather 커스텀 예외로 교체
-            throw new IllegalArgumentException("카테고리는 필수입니다.");
+            throw new BusinessException(RiskException.RISK_ARGUMENT_NOT_IMPLEMENTED,"카테고리는 필수입니다.");
         }
     }
 }
