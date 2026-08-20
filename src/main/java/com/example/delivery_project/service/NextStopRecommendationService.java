@@ -8,6 +8,7 @@ import com.example.delivery_project.dto.response.NextStopRecommendationResponse;
 import com.example.delivery_project.enums.RiskLevel;
 import com.example.delivery_project.exception.DeliveryException;
 import com.example.delivery_project.exception.global.BusinessException;
+import com.example.delivery_project.service.component.DrivingDirectionsClient;
 import com.example.delivery_project.service.component.route.OptimizedRoute;
 import com.example.delivery_project.service.component.route.RouteLeg;
 import com.example.delivery_project.service.component.route.RouteOptimizationContext;
@@ -23,6 +24,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.OptionalLong;
 
 @Slf4j
 @Service
@@ -37,6 +39,7 @@ public class NextStopRecommendationService {
 
     private final DeliveryPlanRepository deliveryPlanRepository;
     private final RouteOptimizer routeOptimizer;
+    private final DrivingDirectionsClient drivingDirectionsClient;
 
     public NextStopRecommendationResponse recommend(
             Long planId,
@@ -87,6 +90,16 @@ public class NextStopRecommendationService {
                         recommendedStopId
                 )
                 .orElseThrow();
+        OptionalLong kakaoTravelDuration =
+                drivingDirectionsClient.findTravelDurationSeconds(
+                        currentPoint.latitude(),
+                        currentPoint.longitude(),
+                        recommendedStop.getLatitude(),
+                        recommendedStop.getLongitude()
+                );
+        Long kakaoTravelSeconds = kakaoTravelDuration.isPresent()
+                ? kakaoTravelDuration.getAsLong()
+                : null;
 
         log.info(
                 "[ROUTE] 다음 배송지 추천 planId: {}, currentStopId: {}, "
@@ -103,7 +116,8 @@ public class NextStopRecommendationService {
                 candidates.size(),
                 candidates.stream().map(DeliveryStop::getId).toList(),
                 optimizedRoute.stopIds(),
-                estimatedTravelSeconds
+                estimatedTravelSeconds,
+                kakaoTravelSeconds
         );
     }
 

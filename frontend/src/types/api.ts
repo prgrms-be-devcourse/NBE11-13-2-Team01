@@ -27,9 +27,12 @@ export interface DeliveryPlanSummary {
   departureLocation: string
   scheduledDepartureAt: string
   actualDepartureAt: string | null
+  completedAt: string | null
   status: DeliveryPlanStatus
   totalStops: number
   remainingStops: number
+  totalBoxes: number
+  remainingBoxes: number
   dangerStops: number
 }
 
@@ -95,6 +98,7 @@ export interface NextStopRecommendation {
   candidateStopIds: number[]
   optimizedSafestRouteStopIds: number[]
   estimatedTravelSeconds: number | null
+  kakaoTravelSeconds: number | null
 }
 
 export interface AdminDeliveryPlanDetail {

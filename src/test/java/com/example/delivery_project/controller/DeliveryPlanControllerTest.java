@@ -60,9 +60,12 @@ class DeliveryPlanControllerTest {
                 "서울 물류센터",
                 LocalDateTime.now().plusHours(1),
                 null,
+                null,
                 DeliveryPlanStatus.READY,
                 2,
                 2,
+                4,
+                4,
                 0
         );
         when(deliveryPlanService.getDeliveryPlans(7L))

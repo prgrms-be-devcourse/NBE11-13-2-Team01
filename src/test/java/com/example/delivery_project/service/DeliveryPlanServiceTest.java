@@ -95,6 +95,8 @@ class DeliveryPlanServiceTest {
         assertThat(responses.getFirst().planId()).isEqualTo(10L);
         assertThat(responses.getFirst().totalStops()).isEqualTo(2);
         assertThat(responses.getFirst().remainingStops()).isEqualTo(2);
+        assertThat(responses.getFirst().totalBoxes()).isEqualTo(2);
+        assertThat(responses.getFirst().remainingBoxes()).isEqualTo(2);
     }
 
     @Test

@@ -1,5 +1,7 @@
 package com.example.delivery_project.service.component.route;
 
+import com.example.delivery_project.exception.DeliveryException;
+import com.example.delivery_project.exception.global.BusinessException;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -65,10 +67,7 @@ public class DijkstraRouteOptimizer implements RouteOptimizer {
             );
         }
 
-        // aTODO 커스텀 예외로 변경
-        throw new IllegalStateException(
-                "모든 후보 배송지를 방문할 수 있는 경로가 없습니다."
-        );
+        throw new BusinessException(DeliveryException.DELIVERY_RECOMMENDATION_NOT_AVAILABLE);
     }
 
     private boolean isOutdated(
