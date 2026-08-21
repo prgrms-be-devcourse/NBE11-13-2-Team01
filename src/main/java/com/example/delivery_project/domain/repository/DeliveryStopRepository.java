@@ -11,11 +11,24 @@ import java.util.Optional;
 
 public interface DeliveryStopRepository extends JpaRepository<DeliveryStop, Long> {
 
-    List<DeliveryStop> findAllByStatusIn(
+    @Query("""
+        select s
+        from DeliveryStop s
+        left join fetch s.riskAssessment
+        where s.status in :statuses
+    """)
+    List<DeliveryStop> findAllWithRiskByStatusIn(
             Collection<DeliveryStopStatus> statuses
     );
 
-    List<DeliveryStop> findAllByDeliveryPlanIdAndStatusIn(
+    @Query("""
+        select s
+        from DeliveryStop s
+        left join fetch s.riskAssessment
+        where s.deliveryPlan.id = :planId
+          and s.status in :statuses
+    """)
+    List<DeliveryStop> findAllWithRiskByDeliveryPlanIdAndStatusIn(
             Long planId,
             Collection<DeliveryStopStatus> statuses
     );
@@ -24,6 +37,15 @@ public interface DeliveryStopRepository extends JpaRepository<DeliveryStop, Long
         select distinct s
         from DeliveryStop s
         left join fetch s.deliveryItems
+        where s.deliveryPlan.id = :planId
+    """)
+    List<DeliveryStop> findAllWithItemsByDeliveryPlanId(Long planId);
+
+    @Query("""
+        select distinct s
+        from DeliveryStop s
+        left join fetch s.deliveryItems
+        left join fetch s.riskAssessment
         where s.id = :stopId
           and s.deliveryPlan.id = :planId
     """)

@@ -4,6 +4,9 @@ import com.example.delivery_project.domain.entity.delivery.DeliveryPlan;
 import com.example.delivery_project.domain.entity.delivery.DeliveryPlanFactory;
 import com.example.delivery_project.domain.entity.user.User;
 import com.example.delivery_project.domain.repository.DeliveryPlanRepository;
+import com.example.delivery_project.domain.repository.DeliveryStopRepository;
+import com.example.delivery_project.domain.repository.RiskAssessmentRepository;
+import com.example.delivery_project.dto.projection.DeliveryPlanSummaryProjection;
 import com.example.delivery_project.dto.response.AdminDeliveryPlanDetailResponse;
 import com.example.delivery_project.dto.response.AdminDeliveryPlanSummaryResponse;
 import com.example.delivery_project.enums.Role;
@@ -32,6 +35,15 @@ class AdminDeliveryPlanServiceTest {
     @Mock
     private DeliveryPlanRepository deliveryPlanRepository;
 
+    @Mock
+    private DeliveryStopRepository deliveryStopRepository;
+
+    @Mock
+    private RiskAssessmentRepository riskAssessmentRepository;
+
+    @Mock
+    private DeliveryPlanSummaryProjection planSummary;
+
     @InjectMocks
     private AdminDeliveryPlanService service;
 
@@ -57,8 +69,21 @@ class AdminDeliveryPlanServiceTest {
 
     @Test
     void 전체_배송계획에_담당기사_정보를_포함해_반환한다() {
-        when(deliveryPlanRepository.findAllByOrderByScheduledDepartureAtAsc())
-                .thenReturn(List.of(plan));
+        when(deliveryPlanRepository.findAllSummaries())
+                .thenReturn(List.of(planSummary));
+        when(planSummary.getPlanId()).thenReturn(10L);
+        when(planSummary.getDriverId()).thenReturn(7L);
+        when(planSummary.getDriverLoginId()).thenReturn("driver");
+        when(planSummary.getDriverName()).thenReturn("배송기사");
+        when(planSummary.getDepartureLocation()).thenReturn("서울 물류센터");
+        when(planSummary.getScheduledDepartureAt())
+                .thenReturn(plan.getScheduledDepartureAt());
+        when(planSummary.getStatus()).thenReturn("READY");
+        when(planSummary.getTotalStops()).thenReturn(1L);
+        when(planSummary.getRemainingStops()).thenReturn(1L);
+        when(planSummary.getTotalBoxes()).thenReturn(0L);
+        when(planSummary.getRemainingBoxes()).thenReturn(0L);
+        when(planSummary.getDangerStops()).thenReturn(0L);
 
         List<AdminDeliveryPlanSummaryResponse> responses =
                 service.getAllDeliveryPlans();

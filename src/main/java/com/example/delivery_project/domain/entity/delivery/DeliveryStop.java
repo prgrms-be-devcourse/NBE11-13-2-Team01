@@ -53,6 +53,7 @@ public class DeliveryStop {
 
     @OneToOne(
             mappedBy = "deliveryStop",
+            fetch = FetchType.LAZY,
             cascade = CascadeType.ALL,
             orphanRemoval = true
     )

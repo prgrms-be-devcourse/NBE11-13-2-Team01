@@ -4,6 +4,7 @@ import com.example.delivery_project.domain.entity.delivery.DeliveryStop;
 import com.example.delivery_project.domain.entity.delivery.RiskAssessment;
 import com.example.delivery_project.enums.RiskFactorType;
 import com.example.delivery_project.domain.entity.weather.Weather;
+import com.example.delivery_project.domain.repository.GridCoordinate;
 import com.example.delivery_project.domain.repository.RiskAssessmentRepository;
 import com.example.delivery_project.domain.repository.WeatherRepository;
 import com.example.delivery_project.exception.RiskException;
@@ -21,9 +22,12 @@ import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -45,53 +49,76 @@ public class RiskAssessmentService {
     public void updateAssessments(
             List<DeliveryStop> deliveryStops
     ) {
-        for (DeliveryStop stop : deliveryStops) {
-            updateAssessment(stop);
+        if (deliveryStops.isEmpty()) {
+            return;
         }
-    }
 
-    private void updateAssessment(DeliveryStop stop) {
-        RiskAssessment assessment = riskAssessmentRepository
-                .findByDeliveryStopId(stop.getId())
-                .orElseThrow(()
-                       -> new BusinessException(RiskException.RISK_NOT_FOUND)
-                );
-
+        Map<Long, RiskAssessment> assessmentsByStopId = riskAssessmentRepository
+                .findAllWithFactorsByDeliveryStopIdIn(
+                        deliveryStops.stream()
+                                .map(DeliveryStop::getId)
+                                .toList()
+                ).stream().collect(Collectors.toMap(
+                        assessment -> assessment
+                                .getDeliveryStop()
+                                .getId(),
+                        Function.identity()
+                ));
         LocalDateTime analyzedAt = LocalDateTime.now();
+        List<AssessmentTarget> weatherTargets = new ArrayList<>();
 
-        if (demoRiskScenarioPolicy.applyIfEnabled(
-                stop.getId(),
-                assessment,
-                analyzedAt
-        )) {
-            log.info(
-                    "데모 위험도 시나리오를 적용합니다. stopId={}, level={}, score={}",
+        for (DeliveryStop stop : deliveryStops) {
+            RiskAssessment assessment = Optional.ofNullable(
+                            assessmentsByStopId.get(stop.getId())
+                    ).orElseThrow(() -> new BusinessException(
+                            RiskException.RISK_NOT_FOUND
+                    ));
+
+            if (demoRiskScenarioPolicy.applyIfEnabled(
                     stop.getId(),
-                    assessment.getLevel(),
-                    assessment.getScore()
-            );
+                    assessment,
+                    analyzedAt
+            )) {
+                log.info("데모 위험도 시나리오를 적용합니다. stopId={}, level={}, score={}",
+                        stop.getId(),
+                        assessment.getLevel(),
+                        assessment.getScore()
+                );
+                continue;
+            }
+
+            weatherTargets.add(new AssessmentTarget(stop, assessment));
+        }
+
+        if (weatherTargets.isEmpty()) {
             return;
         }
 
-        Optional<Map<String, String>> weatherValues =
-                fetchWeatherValues(stop, analyzedAt);
+        Map<GridCoordinate, Optional<Map<String, String>>> weatherByCoordinate =
+                fetchWeatherValues(weatherTargets, analyzedAt);
 
-        if (weatherValues.isEmpty()) {
-            assessment.markUnknown(analyzedAt);
-            log.warn(
-                    "사용 가능한 날씨 데이터가 없어 위험도를 UNKNOWN으로 변경합니다. stopId={}",
-                    stop.getId()
+        for (AssessmentTarget target : weatherTargets) {
+            DeliveryStop stop = target.stop();
+            RiskAssessment assessment = target.assessment();
+            Optional<Map<String, String>> weatherValues = weatherByCoordinate.getOrDefault(
+                    toGrid(stop),
+                    Optional.empty()
             );
-            return;
+
+            if (weatherValues.isEmpty()) {
+                assessment.markUnknown(analyzedAt);
+                log.warn(
+                        "사용 가능한 날씨 데이터가 없어 위험도를 UNKNOWN으로 변경합니다. stopId={}",
+                        stop.getId()
+                );
+                continue;
+            }
+
+            List<RiskFactorType> types =
+                    calculateRiskFactorTypes(weatherValues.get());
+
+            assessment.replaceFactors(types, analyzedAt);
         }
-
-        List<RiskFactorType> types =
-                calculateRiskFactorTypes(weatherValues.get());
-
-        assessment.replaceFactors(
-                types,
-                analyzedAt
-        );
     }
 
     private List<RiskFactorType> calculateRiskFactorTypes(
@@ -116,31 +143,63 @@ public class RiskAssessmentService {
     }
 
     // 현재 예보 시각부터 직전 2시간 이내의 가장 최신인 완전한 데이터 세트를 조회한다.
-    private Optional<Map<String, String>> fetchWeatherValues(
-            DeliveryStop deliveryStop,
+    private Map<GridCoordinate, Optional<Map<String, String>>> fetchWeatherValues(
+            List<AssessmentTarget> targets,
             LocalDateTime now
     ) {
-        LocationConverter.LatXLngY grid = LocationConverter.convertGridGps(
-                LocationConverter.TO_GRID,
-                deliveryStop.getLatitude(),
-                deliveryStop.getLongitude()
-        );
-        int nx = (int) grid.x;
-        int ny = (int) grid.y;
+        Set<GridCoordinate> coordinates = targets.stream()
+                .map(target -> toGrid(target.stop()))
+                .collect(Collectors.toSet());
 
         LocalDateTime currentForecastAt = now.truncatedTo(ChronoUnit.HOURS);
         LocalDateTime earliestForecastAt =
                 currentForecastAt.minusHours(WEATHER_FALLBACK_HOURS);
 
         List<Weather> weathers = weatherRepository
-                .findByNxAndNyAndFcstDateBetweenAndCategoryIn(
-                        nx,
-                        ny,
+                .findByNxInAndNyInAndFcstDateBetweenAndCategoryIn(
+                        coordinates.stream()
+                                .map(GridCoordinate::nx)
+                                .collect(Collectors.toSet()),
+                        coordinates.stream()
+                                .map(GridCoordinate::ny)
+                                .collect(Collectors.toSet()),
                         earliestForecastAt.toLocalDate(),
                         currentForecastAt.toLocalDate(),
                         RISK_CATEGORIES
                 );
 
+        Map<GridCoordinate, List<Weather>> weathersByCoordinate = weathers.stream()
+                .filter(weather -> coordinates.contains(new GridCoordinate(
+                        weather.getNx(),
+                        weather.getNy()
+                )))
+                .collect(Collectors.groupingBy(weather -> new GridCoordinate(
+                        weather.getNx(),
+                        weather.getNy()
+                )));
+
+        Map<GridCoordinate, Optional<Map<String, String>>> result = new HashMap<>();
+        for (GridCoordinate coordinate : coordinates) {
+            result.put(
+                    coordinate,
+                    selectLatestWeatherValues(
+                            weathersByCoordinate.getOrDefault(
+                                    coordinate,
+                                    List.of()
+                            ),
+                            earliestForecastAt,
+                            currentForecastAt
+                    )
+            );
+        }
+        return result;
+    }
+
+    private Optional<Map<String, String>> selectLatestWeatherValues(
+            List<Weather> weathers,
+            LocalDateTime earliestForecastAt,
+            LocalDateTime currentForecastAt
+    ) {
         Map<LocalDateTime, Map<String, String>> valuesByForecastAt =
                 weathers.stream()
                         .collect(Collectors.groupingBy(
@@ -162,4 +221,18 @@ public class RiskAssessmentService {
                 .max(Map.Entry.comparingByKey(Comparator.naturalOrder()))
                 .map(Map.Entry::getValue);
     }
+
+    private GridCoordinate toGrid(DeliveryStop stop) {
+        LocationConverter.LatXLngY grid = LocationConverter.convertGridGps(
+                LocationConverter.TO_GRID,
+                stop.getLatitude(),
+                stop.getLongitude()
+        );
+        return new GridCoordinate((int) grid.x, (int) grid.y);
+    }
+
+    private record AssessmentTarget(
+            DeliveryStop stop,
+            RiskAssessment assessment
+    ) {}
 }

@@ -4,8 +4,10 @@ import com.example.delivery_project.domain.entity.delivery.DeliveryPlan;
 import com.example.delivery_project.domain.entity.delivery.DeliveryStop;
 import com.example.delivery_project.domain.repository.DeliveryPlanRepository;
 import com.example.delivery_project.domain.repository.DeliveryStopRepository;
+import com.example.delivery_project.domain.repository.RiskAssessmentRepository;
 import com.example.delivery_project.dto.request.UpdateDeliveryOrderRequest;
 import com.example.delivery_project.dto.request.UpdateScheduledDepartureRequest;
+import com.example.delivery_project.dto.projection.DeliveryPlanSummaryProjection;
 import com.example.delivery_project.dto.response.DeliveryPlanDetailResponse;
 import com.example.delivery_project.dto.response.DeliveryPlanSummaryResponse;
 import com.example.delivery_project.dto.response.DeliveryStopResponse;
@@ -25,12 +27,14 @@ import java.util.List;
 public class DeliveryPlanService {
     private final DeliveryPlanRepository deliveryPlanRepository;
     private final DeliveryStopRepository deliveryStopRepository;
+    private final RiskAssessmentRepository riskAssessmentRepository;
 
     private static final String PLAN = "[PLAN]";
     private static final String STOP = "[STOP]";
 
     public List<DeliveryPlanSummaryResponse> getDeliveryPlans(Long driverId) {
-        List<DeliveryPlan> deliveryPlans = deliveryPlanRepository.findAllByDriverId(driverId);
+        List<DeliveryPlanSummaryProjection> deliveryPlans =
+                deliveryPlanRepository.findAllSummariesByDriverId(driverId);
 
         log.info("{} 목록 조회 완료 driverId: {}, planSize: {} ", PLAN, driverId, deliveryPlans.size());
         return deliveryPlans.stream()
@@ -42,7 +46,8 @@ public class DeliveryPlanService {
             Long planId,
             Long driverId
     ) {
-        DeliveryPlan plan = getOwnedPlan(planId, driverId);
+        DeliveryPlan plan = getOwnedPlanWithStopsAndRisk(planId, driverId);
+        initializePlanDetail(planId);
 
         log.info("{} 조회 완료 planId: {}", PLAN, planId);
         return DeliveryPlanDetailResponse.from(plan);
@@ -57,6 +62,9 @@ public class DeliveryPlanService {
 
         DeliveryStop stop = deliveryStopRepository.findDetailByIdAndPlanId(stopId, planId)
                 .orElseThrow(() -> new BusinessException(DeliveryException.DELIVERY_STOP_NOT_FOUND));
+        riskAssessmentRepository.findAllWithFactorsByDeliveryStopIdIn(
+                List.of(stopId)
+        );
         log.info("{} 조회 완료 planId: {}, stopId: {}", STOP, planId, stopId);
 
         return DeliveryStopResponse.from(stop);
@@ -79,7 +87,7 @@ public class DeliveryPlanService {
             Long driverId,
             UpdateDeliveryOrderRequest request
     ) {
-        DeliveryPlan plan = getOwnedPlan(planId, driverId);
+        DeliveryPlan plan = getOwnedPlanWithStopsAndRisk(planId, driverId);
         log.info("{} 순서 편집 요청 planId: {}", PLAN, planId);
         plan.reorderStops(request.stopIds());
     }
@@ -89,7 +97,7 @@ public class DeliveryPlanService {
             Long planId,
             Long driverId
     ) {
-        DeliveryPlan plan = getOwnedPlan(planId, driverId);
+        DeliveryPlan plan = getOwnedPlanWithStopsAndRisk(planId, driverId);
         log.info("{} 배송 시작 요청 planId: {}", PLAN, planId);
         plan.start();
     }
@@ -100,7 +108,7 @@ public class DeliveryPlanService {
             Long stopId,
             Long driverId
     ) {
-        DeliveryPlan plan = getOwnedPlan(planId, driverId);
+        DeliveryPlan plan = getOwnedPlanWithStopsAndRisk(planId, driverId);
         log.info("{} 포인트 배송 완료처리 요청 planId: {}, stopId: {}", PLAN, planId, stopId);
         plan.completeStop(stopId);
     }
@@ -110,7 +118,7 @@ public class DeliveryPlanService {
             Long planId,
             Long driverId
     ) {
-        DeliveryPlan plan = getOwnedPlan(planId, driverId);
+        DeliveryPlan plan = getOwnedPlanWithStopsAndRisk(planId, driverId);
         log.info("{} 전체 배송 완료 처리 요청 planId: {}", PLAN, planId);
         plan.finish();
     }
@@ -125,5 +133,21 @@ public class DeliveryPlanService {
                         driverId
                 )
                 .orElseThrow(() -> new BusinessException(DeliveryException.DELIVERY_PLAN_NOT_FOUND));
+    }
+
+    private DeliveryPlan getOwnedPlanWithStopsAndRisk(
+            Long planId,
+            Long driverId
+    ) {
+        return deliveryPlanRepository
+                .findWithStopsAndRiskByIdAndDriverId(planId, driverId)
+                .orElseThrow(() -> new BusinessException(
+                        DeliveryException.DELIVERY_PLAN_NOT_FOUND
+                ));
+    }
+
+    private void initializePlanDetail(Long planId) {
+        deliveryStopRepository.findAllWithItemsByDeliveryPlanId(planId);
+        riskAssessmentRepository.findAllWithFactorsByDeliveryPlanId(planId);
     }
 }

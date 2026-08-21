@@ -1,6 +1,6 @@
 package com.example.delivery_project.dto.response;
 
-import com.example.delivery_project.domain.entity.delivery.DeliveryPlan;
+import com.example.delivery_project.dto.projection.DeliveryPlanSummaryProjection;
 import com.example.delivery_project.enums.DeliveryPlanStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 
@@ -31,19 +31,21 @@ public record DeliveryPlanSummaryResponse(
         @Schema(description = "위험 배송지 수", example = "1")
         long dangerStops
 ) {
-    public static DeliveryPlanSummaryResponse from(DeliveryPlan plan) {
+    public static DeliveryPlanSummaryResponse from(
+            DeliveryPlanSummaryProjection summary
+    ) {
         return new DeliveryPlanSummaryResponse(
-                plan.getId(),
-                plan.getDepartureLocation(),
-                plan.getScheduledDepartureAt(),
-                plan.getActualDepartureAt(),
-                plan.getCompletedAt(),
-                plan.getStatus(),
-                plan.getTotalStops(),
-                plan.getRemainingStops(),
-                plan.getTotalBoxes(),
-                plan.getRemainingBoxes(),
-                plan.getDangerStops()
+                summary.getPlanId(),
+                summary.getDepartureLocation(),
+                summary.getScheduledDepartureAt(),
+                summary.getActualDepartureAt(),
+                summary.getCompletedAt(),
+                DeliveryPlanStatus.valueOf(summary.getStatus()),
+                summary.getTotalStops().intValue(),
+                summary.getRemainingStops().longValue(),
+                summary.getTotalBoxes().longValue(),
+                summary.getRemainingBoxes().longValue(),
+                summary.getDangerStops().longValue()
         );
     }
 }

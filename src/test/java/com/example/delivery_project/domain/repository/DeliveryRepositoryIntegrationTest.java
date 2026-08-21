@@ -5,11 +5,17 @@ import com.example.delivery_project.domain.entity.delivery.DeliveryPlanFactory;
 import com.example.delivery_project.domain.entity.delivery.DeliveryStop;
 import com.example.delivery_project.domain.entity.user.User;
 import com.example.delivery_project.domain.entity.weather.Weather;
+import com.example.delivery_project.dto.projection.DeliveryPlanSummaryProjection;
+import com.example.delivery_project.dto.response.DeliveryPlanDetailResponse;
 import com.example.delivery_project.enums.DeliveryStopStatus;
 import com.example.delivery_project.enums.ProductType;
+import com.example.delivery_project.enums.RiskFactorType;
 import com.example.delivery_project.enums.Role;
 import com.example.delivery_project.spec.Location;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.EntityManagerFactory;
+import org.hibernate.SessionFactory;
+import org.hibernate.stat.Statistics;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,7 +30,10 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@DataJpaTest(properties = "spring.sql.init.mode=never")
+@DataJpaTest(properties = {
+        "spring.sql.init.mode=never",
+        "spring.jpa.properties.hibernate.generate_statistics=true"
+})
 @ActiveProfiles("db-test")
 @AutoConfigureTestDatabase(
         replace = AutoConfigureTestDatabase.Replace.NONE
@@ -45,10 +54,16 @@ class DeliveryRepositoryIntegrationTest {
     private DeliveryStopRepository deliveryStopRepository;
 
     @Autowired
+    private RiskAssessmentRepository riskAssessmentRepository;
+
+    @Autowired
     private WeatherRepository weatherRepository;
 
     @Autowired
     private EntityManager entityManager;
+
+    @Autowired
+    private EntityManagerFactory entityManagerFactory;
 
     @Test
     void 배송계획_연관관계와_활성_배송지_쿼리를_검증한다() {
@@ -88,12 +103,26 @@ class DeliveryRepositoryIntegrationTest {
                 Long.MAX_VALUE
         )).isEmpty();
 
+        DeliveryPlanSummaryProjection summary = deliveryPlanRepository
+                .findAllSummariesByDriverId(driver.getId())
+                .getFirst();
+        assertThat(summary.getPlanId()).isEqualTo(savedPlan.getId());
+        assertThat(summary.getDriverId()).isEqualTo(driver.getId());
+        assertThat(summary.getTotalStops().longValue()).isEqualTo(2L);
+        assertThat(summary.getRemainingStops().longValue()).isEqualTo(2L);
+        assertThat(summary.getTotalBoxes().longValue()).isEqualTo(1L);
+        assertThat(summary.getRemainingBoxes().longValue()).isEqualTo(1L);
+        assertThat(summary.getDangerStops().longValue()).isZero();
+        assertThat(deliveryPlanRepository.findAllSummaries())
+                .extracting(DeliveryPlanSummaryProjection::getPlanId)
+                .contains(savedPlan.getId());
+
         List<DeliveryStop> readyStops =
-                deliveryStopRepository.findAllByStatusIn(
+                deliveryStopRepository.findAllWithRiskByStatusIn(
                         List.of(DeliveryStopStatus.READY)
-                );
+        );
         List<DeliveryStop> planStops = deliveryStopRepository
-                .findAllByDeliveryPlanIdAndStatusIn(
+                .findAllWithRiskByDeliveryPlanIdAndStatusIn(
                         savedPlan.getId(),
                         List.of(DeliveryStopStatus.READY)
                 );
@@ -110,7 +139,7 @@ class DeliveryRepositoryIntegrationTest {
         savedPlan.start();
         deliveryPlanRepository.flush();
 
-        assertThat(deliveryStopRepository.findAllByStatusIn(
+        assertThat(deliveryStopRepository.findAllWithRiskByStatusIn(
                 List.of(DeliveryStopStatus.DELIVERING)
         )).hasSize(2);
     }
@@ -164,5 +193,60 @@ class DeliveryRepositoryIntegrationTest {
                 )).singleElement()
                 .extracting(Weather::getFcstValue)
                 .isEqualTo("33");
+    }
+
+    @Test
+    void 배송지_수가_늘어도_상세_조회는_세_쿼리로_고정된다() {
+        User driver = userRepository.save(User.of(
+                "detail-query-driver",
+                "password",
+                "상세조회기사",
+                Role.ROLE_DELIVERY_DRIVER
+        ));
+        DeliveryPlan plan = DeliveryPlanFactory.create(
+                driver,
+                new Location("서울 물류센터", 37.50, 126.90),
+                LocalDateTime.now().plusHours(1)
+        );
+        for (int index = 0; index < 10; index++) {
+            DeliveryStop stop = plan.addStop(
+                    "배송지 " + index,
+                    37.51 + index * 0.001,
+                    126.91 + index * 0.001,
+                    LocalDateTime.now()
+            );
+            stop.addItem("상품 " + index, ProductType.NORMAL, index + 1);
+            stop.getRiskAssessment().replaceFactors(
+                    List.of(RiskFactorType.HEAVY_RAIN),
+                    LocalDateTime.now()
+            );
+        }
+        DeliveryPlan savedPlan = deliveryPlanRepository.saveAndFlush(plan);
+        entityManager.clear();
+
+        Statistics statistics = entityManagerFactory
+                .unwrap(SessionFactory.class)
+                .getStatistics();
+        statistics.clear();
+
+        DeliveryPlan loadedPlan = deliveryPlanRepository
+                .findDetailById(savedPlan.getId())
+                .orElseThrow();
+        deliveryStopRepository.findAllWithItemsByDeliveryPlanId(
+                savedPlan.getId()
+        );
+        riskAssessmentRepository.findAllWithFactorsByDeliveryPlanId(
+                savedPlan.getId()
+        );
+        DeliveryPlanDetailResponse response =
+                DeliveryPlanDetailResponse.from(loadedPlan);
+
+        assertThat(response.deliveryStops()).hasSize(10);
+        assertThat(response.deliveryStops())
+                .allSatisfy(stop -> {
+                    assertThat(stop.deliveryItems()).hasSize(1);
+                    assertThat(stop.riskAssessment().factors()).hasSize(1);
+                });
+        assertThat(statistics.getPrepareStatementCount()).isEqualTo(3L);
     }
 }

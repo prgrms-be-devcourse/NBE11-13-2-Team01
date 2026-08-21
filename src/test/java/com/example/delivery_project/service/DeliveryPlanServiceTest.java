@@ -6,6 +6,8 @@ import com.example.delivery_project.domain.entity.delivery.DeliveryStop;
 import com.example.delivery_project.domain.entity.user.User;
 import com.example.delivery_project.domain.repository.DeliveryPlanRepository;
 import com.example.delivery_project.domain.repository.DeliveryStopRepository;
+import com.example.delivery_project.domain.repository.RiskAssessmentRepository;
+import com.example.delivery_project.dto.projection.DeliveryPlanSummaryProjection;
 import com.example.delivery_project.dto.request.UpdateDeliveryOrderRequest;
 import com.example.delivery_project.dto.request.UpdateScheduledDepartureRequest;
 import com.example.delivery_project.dto.response.DeliveryPlanDetailResponse;
@@ -42,6 +44,12 @@ class DeliveryPlanServiceTest {
 
     @Mock
     private DeliveryStopRepository deliveryStopRepository;
+
+    @Mock
+    private RiskAssessmentRepository riskAssessmentRepository;
+
+    @Mock
+    private DeliveryPlanSummaryProjection planSummary;
 
     @InjectMocks
     private DeliveryPlanService deliveryPlanService;
@@ -85,8 +93,18 @@ class DeliveryPlanServiceTest {
 
     @Test
     void 기사별_배송계획_목록을_요약_응답으로_반환한다() {
-        when(deliveryPlanRepository.findAllByDriverId(1L))
-                .thenReturn(List.of(plan));
+        when(deliveryPlanRepository.findAllSummariesByDriverId(1L))
+                .thenReturn(List.of(planSummary));
+        when(planSummary.getPlanId()).thenReturn(10L);
+        when(planSummary.getDepartureLocation()).thenReturn("서울 물류센터");
+        when(planSummary.getScheduledDepartureAt())
+                .thenReturn(plan.getScheduledDepartureAt());
+        when(planSummary.getStatus()).thenReturn("READY");
+        when(planSummary.getTotalStops()).thenReturn(2L);
+        when(planSummary.getRemainingStops()).thenReturn(2L);
+        when(planSummary.getTotalBoxes()).thenReturn(2L);
+        when(planSummary.getRemainingBoxes()).thenReturn(2L);
+        when(planSummary.getDangerStops()).thenReturn(0L);
 
         List<DeliveryPlanSummaryResponse> responses =
                 deliveryPlanService.getDeliveryPlans(1L);
@@ -101,6 +119,8 @@ class DeliveryPlanServiceTest {
 
     @Test
     void 배송계획과_배송지_상세를_응답으로_변환한다() {
+        when(deliveryPlanRepository.findWithStopsAndRiskByIdAndDriverId(10L, 1L))
+                .thenReturn(Optional.of(plan));
         when(deliveryPlanRepository.findByIdAndDriverId(10L, 1L))
                 .thenReturn(Optional.of(plan));
         when(deliveryStopRepository.findDetailByIdAndPlanId(101L, 10L))
@@ -124,6 +144,8 @@ class DeliveryPlanServiceTest {
     @Test
     void 배송_상태_변경_흐름을_서비스에서_수행한다() {
         when(deliveryPlanRepository.findByIdAndDriverId(10L, 1L))
+                .thenReturn(Optional.of(plan));
+        when(deliveryPlanRepository.findWithStopsAndRiskByIdAndDriverId(10L, 1L))
                 .thenReturn(Optional.of(plan));
         LocalDateTime changedDepartureAt = LocalDateTime.now().plusHours(2);
 
@@ -153,7 +175,7 @@ class DeliveryPlanServiceTest {
 
     @Test
     void 존재하지_않는_계획을_조회하면_예외가_발생한다() {
-        when(deliveryPlanRepository.findByIdAndDriverId(999L, 1L))
+        when(deliveryPlanRepository.findWithStopsAndRiskByIdAndDriverId(999L, 1L))
                 .thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> deliveryPlanService.getDeliveryPlan(999L, 1L))
@@ -182,7 +204,7 @@ class DeliveryPlanServiceTest {
 
     @Test
     void 다른_기사의_배송계획에는_접근할_수_없다() {
-        when(deliveryPlanRepository.findByIdAndDriverId(10L, 2L))
+        when(deliveryPlanRepository.findWithStopsAndRiskByIdAndDriverId(10L, 2L))
                 .thenReturn(Optional.empty());
 
         assertThatThrownBy(
