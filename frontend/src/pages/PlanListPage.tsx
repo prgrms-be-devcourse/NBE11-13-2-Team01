@@ -232,13 +232,24 @@ export function PlanListPage() {
                 <article className="today-metric-card">
                   <span className="today-metric-index">오늘 배송할 집 수</span>
                   <div>
-                    <strong>{todaySummary.totalStops}<em>곳</em></strong>
+                    <strong>{todaySummary.totalStops}<em>집</em></strong>
                   </div>
                 </article>
                 <article className="today-metric-card is-accented">
-                  <span className="today-metric-index">남은 집 수</span>
+                  <span className="today-metric-index">진행률</span>
                   <div>
-                    <strong>{todaySummary.remainingStops}<em>곳</em></strong>
+                    <small>
+                      {(100 -(todaySummary.remainingStops / todaySummary.totalStops * 100)).toFixed(1)}<em>%</em>
+                    </small>
+                    <strong>
+                      {todaySummary.totalStops - todaySummary.remainingStops}
+                      <em>
+                        집
+                      </em>
+                      <small>
+                        <span>잔여 {todaySummary.remainingStops}</span>(전체 {todaySummary.totalStops})
+                      </small>
+                    </strong>
                   </div>
                 </article>
                 <article className="today-metric-card">
@@ -248,9 +259,20 @@ export function PlanListPage() {
                   </div>
                 </article>
                 <article className="today-metric-card is-accented">
-                  <span className="today-metric-index">남은 물량</span>
+                  <span className="today-metric-index">진행률</span>
                   <div>
-                    <strong>{todaySummary.remainingBoxes}<em>박스</em></strong>
+                    <small>
+                      {(100 - (todaySummary.remainingBoxes / todaySummary.totalBoxes * 100)).toFixed(1)}<em>%</em>
+                    </small>
+                    <strong>
+                      {todaySummary.totalBoxes - todaySummary.remainingBoxes}
+                      <em>
+                        박스
+                      </em>
+                      <small>
+                         잔여 {todaySummary.remainingBoxes} (전체 {todaySummary.totalBoxes})
+                      </small>
+                    </strong>
                   </div>
                 </article>
               </div>
@@ -330,7 +352,6 @@ export function PlanListPage() {
                   <span className="eyebrow">DRIVER VIEW</span>
                   <h2>기사별 배송 계획</h2>
                 </div>
-                <p>상단 통계는 오늘 일정의 전체 기사 기준입니다.</p>
               </div>
               <div className="driver-filter-tabs" role="tablist" aria-label="배송 기사 선택">
                 {driverGroups.map((group, index) => {

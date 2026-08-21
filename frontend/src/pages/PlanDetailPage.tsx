@@ -424,7 +424,11 @@ export function PlanDetailPage() {
                     </div>
                     <div className="risk-score">
                       <span>위험 점수</span>
-                      <strong>{risk?.score ?? -1}</strong>
+                      <strong>
+                        {risk?.score == null || risk.score === -1
+                            ? "정보 없음"
+                            : risk.score}
+                      </strong>
                     </div>
                   </div>
 
